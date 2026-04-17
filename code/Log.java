@@ -68,15 +68,15 @@ public class Log {
 			throw new IllegalArgumentException("Malformed log line: " + line);
 		}
 
-		// convert string → correct types
-		long timestamp = Long.parseLong(parts[0]); // string → long
-		Date date = new Date(timestamp); // long → Date
+		// convert string --> correct types
+		long timestamp = Long.parseLong(parts[0]); // string --> long
+		Date date = new Date(timestamp); // long --> Date
 
-		TRANSACTION_TYPE type = TRANSACTION_TYPE.valueOf(parts[1]); // string → enum
+		TRANSACTION_TYPE type = TRANSACTION_TYPE.valueOf(parts[1]); // string --> enum
 
 		String comment = parts[2];
 
-		double amount = Double.parseDouble(parts[3]); // string → double
+		double amount = Double.parseDouble(parts[3]); // string --> double
 
 		return new Log(date, type, comment, amount);
 	}

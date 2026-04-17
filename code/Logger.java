@@ -72,7 +72,7 @@ public class Logger {
 	// NOTE: currently overwrites file each time to avoid duplicates
 	void saveLogs() {
 		try {
-			FileWriter writer = new FileWriter(filename); // overwrite instead of append
+			FileWriter writer = new FileWriter(filename); // overwrite each time
 
 			for (Log log: logs) {
 				// USE LINESEPARATOR HERE SO WE DONT HAVE STUPID WINDOWS CRLF CHARACTERS THAT CAUSE ISSUES
