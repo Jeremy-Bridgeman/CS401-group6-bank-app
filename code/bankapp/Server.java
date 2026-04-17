@@ -11,6 +11,8 @@ public class Server {
 	CreditAccountValidator creditValidator = new CreditAccountValidator();
 	ArrayList<Account> accounts;
 	
+	// TODO: create a bucketed hash table for the accounts where the name plus account number is the key and the bucket contains all transactions
+	
 	public static void main(String[] args) {
 		if (args.length != 1) {
 			ip = "10.0.0.216";	// this will need to be changed or we will need to write a helper to try to grab the ip dynamically
