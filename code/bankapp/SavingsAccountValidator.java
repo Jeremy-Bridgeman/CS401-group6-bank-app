@@ -1,5 +1,5 @@
 package bankapp;
 
-public class SavingsAccountValidator {
+public class SavingsAccountValidator extends AccountValidator {
 	
 }
