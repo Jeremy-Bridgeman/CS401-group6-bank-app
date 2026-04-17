@@ -1,7 +1,7 @@
 package bankapp;
 import java.io.*;
 
-// this class is responsible for encapsulating data to send around in our 
+// this class is responsible for encapsulating response data to send around in our 
 // application. Each message is one time use and immutable, once used it will be discarded
 public class Response implements Serializable {
 	
