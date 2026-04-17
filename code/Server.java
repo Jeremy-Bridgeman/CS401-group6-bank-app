@@ -8,6 +8,7 @@ public class Server {
 	CheckingAccountValidator checkingValidator = new CheckingAccountValidator();
 	SavingsAccountValidator savingsValidator = new SavingsAccountValidator();
 	CreditAccountValidator creditValidator = new CreditAccountValidator();
+	ArrayList<Account> accounts;
 	
 	public static void main(String[] args) {
 		if (args.length != 1) {
@@ -16,11 +17,66 @@ public class Server {
 		else {
 			ip = args[0];
 		}
-
+		// NOTE: THIS IS NOT NEEDED IN THE SERVER CLASS, BUT THIS IS HOW YOU SHOULD STRUCTURE YOUR CLIENTS.
+		// this ensures that we can easily start the program from the command line with a given ip address and
+		// dont need to make any changes to the code before running it
+		try {
+			
+			ServerSocket serverSocket = new ServerSocket(7890);
+			serverSocket.setReuseAddress(true);
+			Socket client = null;
+			while (true) {
+				client = serverSocket.accept();
+				ClientHandler handler = new ClientHandler(client);
+				new Thread(handler).start();
+			}
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
-	public ArrayList<Log> getLogs() {
+	private static class ClientHandler implements Runnable {
 		
+		private ClientHandler(Socket c) {
+			OutputStream out = null;
+			InputStream in = null;
+			try {
+				// create input streams and upgrade them
+				out = c.getOutputStream();
+				in = c.getInputStream();
+				ObjectOutputStream o = new ObjectOutputStream(out);
+				o.flush();
+				ObjectInputStream i = new ObjectInputStream(in);
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+			finally { // cleanup, close everything out
+				try {
+					if (in != null) {
+						in.close();
+					}
+					if (out != null) {
+						out.close();
+					}
+					if (!c.isClosed() && c != null) {
+						c.close();
+					}
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}
+		@Override
+		public void run() {
+			
+		}
+	}
+	
+	private ArrayList<Log> getLogs() {
 		return logger.getLogs();
 	}
 
