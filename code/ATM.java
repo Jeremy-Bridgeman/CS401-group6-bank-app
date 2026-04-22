@@ -1,47 +1,117 @@
+import bankapp.Account;
+import bankapp.Log;
+import bankapp.Person;
+import bankapp.Request;
+import bankapp.Response;
+
+// Allows it to work with server
+import java.io.*;
+import java.net.Socket;
 
 public class ATM {
-	private double cash;
+	// Do not need this
+	// Conflicts with server
+	//(remove from UML)
+	// private double cash;
+	
 	private int failedAttempts;
 	private boolean serviceCompleted;
+	
+	private Socket socket;
+	private ObjectOutputStream out;
+	private ObjectInputStream in;
 	
 	//Place Holders
 	private double dailyWithdrawalLimit = 10000;
 	private double dailyDepositLimit = 10000;
 	
-	
+	// Changed so its compatible with Server
 	public ATM(String serverIP) {
+		try {
+			socket = new Socket(serverIP, 7890);
+			out = new ObjectOutputStream(socket.getOutputStream());
+			out.flush();
+			
+			in = new ObjectInputStream(socket.getInputStream());
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		this.failedAttempts = 0;
 		this.serviceCompleted = false;
-		this.cash = 1000; // placeholder
 	}
 	
 	// Basic ATM Functions
-	public double withdraw(double amount) {
-		if (amount <= 0) {
-			displayError();
-			return 0;
-		}
-		if (amount > cash) {
-			displayError();
-			return 0;
-		}
-		cash -= amount;
-		displayConfirmation();
-		return amount;
+	// Changed so its compatible with Server
+	public Response withdraw(double amount, Account account, Person person) {
+	    try {
+	        Request req = new Request(
+	                Request.REQUEST_TYPE.WITHDRAW,
+	                Request.USER_TYPE.ATM,
+	                person,
+	                account,
+	                null,
+	                amount,
+	                "withdraw request"
+	        );
+
+	        out.writeObject(req);
+	        out.flush();
+
+	        return (Response) in.readObject();
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new Response("ATM error", Response.RESPONSE_TYPE.ERROR);
+	    }
 	}
 	
-	public double deposit(double amount) {
-		if (amount <= 0) { 
-			displayError();
-			return 0;
-		}
-		cash += amount;
-		displayConfirmation();
-		return amount;
+	// Changed so its compatible with Server
+	public Response deposit(double amount, Account account, Person person) {
+	    try {
+	        Request req = new Request(
+	                Request.REQUEST_TYPE.DEPOSIT,
+	                Request.USER_TYPE.ATM,
+	                person,
+	                account,
+	                null,
+	                amount,
+	                "deposit request"
+	        );
+
+	        out.writeObject(req);
+	        out.flush();
+
+	        return (Response) in.readObject();
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new Response("ATM error", Response.RESPONSE_TYPE.ERROR);
+	    }
 	}
 	
-	public double checkBalance() {
-		return cash;
+	// Changed so its compatible with Server
+	public Response checkBalance(Account account, Person person) {
+	    try {
+	        Request req = new Request(
+	                Request.REQUEST_TYPE.VIEW_ACCOUNT,
+	                Request.USER_TYPE.ATM,
+	                person,
+	                account,
+	                null,
+	                0,
+	                "view account"
+	        );
+
+	        out.writeObject(req);
+	        out.flush();
+
+	        return (Response) in.readObject();
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new Response("ATM error", Response.RESPONSE_TYPE.ERROR);
+	    }
 	}
 	
 	public void displayConfirmation() {
@@ -53,7 +123,7 @@ public class ATM {
 		
 	}
 	public double getCashAmount() {
-		return cash;
+		return 0;
 	}
 	
 	// Login Functions
@@ -99,9 +169,7 @@ public class ATM {
 	}
 	
 	// Setters
-	public void setCashAmount(double amount) {
-		this.cash = amount;
-	}
+	
 	public void setFailedAttempts(int amount) {
 		this.failedAttempts = amount;
 	}
