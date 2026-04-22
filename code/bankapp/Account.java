@@ -1,7 +1,8 @@
 package bankapp;
+import java.io.Serializable;
 import java.util.*;
 
-public class Account {
+public class Account implements Serializable {
 	public enum ACCOUNT_STATUS {
 		OPEN,
 		CLOSED,
@@ -76,5 +77,8 @@ public class Account {
 	}
 	public void setAuthorizedUsers(ArrayList<Person> authorizedUsers) {
 		this.authorizedUsers = authorizedUsers;
+	}
+	public void flag() {
+		// logic for flagging the account here
 	}
 }
