@@ -4,29 +4,52 @@ public class ATM {
 	private int failedAttempts;
 	private boolean serviceCompleted;
 	
+	//Place Holders
+	private double dailyWithdrawalLimit = 10000;
+	private double dailyDepositLimit = 10000;
+	
 	
 	public ATM(String serverIP) {
 		this.failedAttempts = 0;
 		this.serviceCompleted = false;
+		this.cash = 1000; // placeholder
 	}
 	
 	// Basic ATM Functions
 	public double withdraw(double amount) {
+		if (amount <= 0) {
+			displayError();
+			return 0;
+		}
+		if (amount > cash) {
+			displayError();
+			return 0;
+		}
+		cash -= amount;
+		displayConfirmation();
 		return amount;
 	}
 	
 	public double deposit(double amount) {
+		if (amount <= 0) { 
+			displayError();
+			return 0;
+		}
+		cash += amount;
+		displayConfirmation();
 		return amount;
 	}
 	
-	public double checkBalance(double amount) {
-		return amount;
+	public double checkBalance() {
+		return cash;
 	}
 	
 	public void displayConfirmation() {
+		System.out.println("Transaction Successful.");
 		
 	}
 	public void displayError() {
+		System.out.println("Transaction Failed.");
 		
 	}
 	public double getCashAmount() {
@@ -34,7 +57,22 @@ public class ATM {
 	}
 	
 	// Login Functions
-	public void login(int id, int pin) {
+	public boolean login(int id, int pin) {
+		// Placeholder until server/auth later
+		boolean success = true;
+		
+		if (!success) {
+			failedAttempts++;
+			
+			if (failedAttempts >= 5) {
+				serviceCompleted = true;
+			}
+			displayError();
+			return false;
+		}
+		
+		failedAttempts = 0;
+		return true;
 		
 	}
 	
@@ -44,11 +82,11 @@ public class ATM {
 	
 	// Getters 
 	public double getDailyWithdrawalLimit() {
-		return cash;
+		return dailyWithdrawalLimit;
 		
 	}
 	public double getDailyDepositLimit() {
-		return cash;
+		return dailyDepositLimit;
 		
 	}
 	public int getFailedAttempts() {
@@ -62,13 +100,13 @@ public class ATM {
 	
 	// Setters
 	public void setCashAmount(double amount) {
-		return;
+		this.cash = amount;
 	}
 	public void setFailedAttempts(int amount) {
-		return;
+		this.failedAttempts = amount;
 	}
 	public void setServiceCompletion(boolean result) {
-		return;
+		this.serviceCompleted = result;
 	}
 
 }

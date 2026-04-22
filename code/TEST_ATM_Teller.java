@@ -5,7 +5,6 @@ public class TEST_ATM_Teller extends TEST_ATM_Person {
 		super(name, address);
 		
 	}
-
 	private int registerNumber;
 	
 	public double withdraw(double amount) {

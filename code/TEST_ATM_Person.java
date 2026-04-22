@@ -1,6 +1,6 @@
+import java.io.Serializable;
 
-
-public class TEST_ATM_Person {
+public class TEST_ATM_Person implements Serializable{
 	private String name;
 	private TEST_ATM_Address address;
 	
