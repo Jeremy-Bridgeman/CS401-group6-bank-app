@@ -86,4 +86,20 @@ public class Logger {
 			e.printStackTrace();
 		}
 	}
+	public synchronized void clearLogs() {
+		logs.clear();
+	}
+
+	public synchronized void setFilename(String filename) {
+		this.filename = filename;
+	}
+
+	public synchronized String getFilename() {
+		return filename;
+	}
+
+	public synchronized void reloadLogs() {
+		logs.clear();
+		loadLogs();
+	}
 }
