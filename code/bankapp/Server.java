@@ -146,12 +146,11 @@ public class Server {
         	else 
         		return new Response("Unknown Request, consider adding another RESPONSE_TYPE", Response.RESPONSE_TYPE.INFO);
         	
-//            return new Response("request received", Response.RESPONSE_TYPE.INFO);
         }
     }
 	
-	private ArrayList<Log> getLogs() {
-		return logger.getLogs();
-	}
+//	private ArrayList<Log> getLogs() {
+//		return logger.getLogs();
+//	}
 
 }
