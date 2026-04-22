@@ -3,13 +3,13 @@ import java.util.*;
 
 // this class validates the account status of a given account and ensures negative numbers are not passed as an amount
 public class AccountValidator {
-    protected enum VALIDATION_RESULT {
+    public enum VALIDATION_RESULT {
         PASS,
         FAIL
     }
 
-    // use a protected nested class for data encapsulation and easy data movement
-    protected class ValidationMessage {
+    // use a public nested class for data encapsulation and easy data movement
+    public static class ValidationMessage {
         private ArrayList<String> msg = new ArrayList<String>();
         private Date date;
         private VALIDATION_RESULT RESULT;
