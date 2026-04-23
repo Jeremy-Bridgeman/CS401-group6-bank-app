@@ -66,6 +66,30 @@ public class ATM {
 	    }
 	}
 	
+	// An open account function
+	public Response openAccount(Account account, Person person) {
+	    try {
+	        Request req = new Request(
+	                Request.REQUEST_TYPE.OPEN_ACCOUNT,
+	                Request.USER_TYPE.ATM,
+	                person,
+	                account,
+	                null,
+	                0,
+	                "open account"
+	        );
+
+	        out.writeObject(req);
+	        out.flush();
+
+	        return (Response) in.readObject();
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new Response("ATM error", Response.RESPONSE_TYPE.ERROR);
+	    }
+	}
+	
 	// Changed so its compatible with Server
 	public Response deposit(double amount, Account account, Person person) {
 	    try {
@@ -144,6 +168,47 @@ public class ATM {
 		failedAttempts = 0;
 		return true;
 		
+	}
+	
+	// Cleanup method
+	public void close() {
+	    try {
+	        if (in != null) in.close();
+	        if (out != null) out.close();
+	        if (socket != null) socket.close();
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	    }
+	}
+	
+	// Wrapper and adapts (purely for working purpose)
+	private Response convert(bankapp.Response r) {
+
+	   Response.RESPONSE_TYPE type;
+
+	    switch (r.getType()) {
+	        case SUCCESS:
+	            type = Response.RESPONSE_TYPE.SUCCESS;
+	            break;
+
+	        case ERROR:
+	            type = Response.RESPONSE_TYPE.ERROR;
+	            break;
+
+	        case WARNING:
+	            type = Response.RESPONSE_TYPE.WARNING;
+	            break;
+
+	        case LOG:
+	            type = Response.RESPONSE_TYPE.LOG;
+	            break;
+
+	        default:
+	            type = Response.RESPONSE_TYPE.INFO;
+	            break;
+	    }
+
+	    return new Response(r.getMessage(), type);
 	}
 	
 	public void logAttempt(Log log) {
