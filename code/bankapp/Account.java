@@ -37,6 +37,7 @@ public class Account {
 	
 	public void addAuthorizedUser(Customer user, Teller t) {
 		// add user to authorizedUser list
+		authorizedUsers.add(user);
 		
 		// update lastUsed
 		lastUsed = new Date();
