@@ -113,7 +113,7 @@ public class TellerGUI extends JFrame {
     private void showResponse(Response response, String title) {
         int messageType = response.getType() == Response.RESPONSE_TYPE.ERROR ? JOptionPane.ERROR_MESSAGE : JOptionPane.INFORMATION_MESSAGE;
 
-        JOptionPane.showMessageDialog(this, response.getText(), title, messageType);
+        JOptionPane.showMessageDialog(this, response.getMessage(), title, messageType);
     }
 
     private void showError(String msg) {

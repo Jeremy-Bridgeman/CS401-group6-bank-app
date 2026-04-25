@@ -121,7 +121,7 @@ class ClientHandler implements Runnable {
         if (res == null) return "null response";
 
         return "Response{type=" + res.getType()
-                + ", text=\"" + res.getText() + "\"}";
+                + ", text=\"" + res.getMessage() + "\"}";
     }
 
     private String formatAccount(Account acc) {
