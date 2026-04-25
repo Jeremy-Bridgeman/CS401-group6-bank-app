@@ -15,7 +15,6 @@ public class Server {
 	CreditAccountValidator creditValidator = new CreditAccountValidator();
 	List<Account> accounts = Collections.synchronizedList(new ArrayList<Account>()); // use a thread safe data structure
 	
-	// TODO: create a bucketed hash table for the accounts where the name plus account number is the key and the bucket contains all transactions
 	
 	public static void main(String[] args) {
 		Server server = new Server();
@@ -27,8 +26,13 @@ public class Server {
             ServerSocket serverSocket = new ServerSocket(7890);
             serverSocket.setReuseAddress(true);
 
+            System.out.println("[SERVER] Listening on port 7890...");
+
             while (true) {
                 Socket client = serverSocket.accept();
+
+                System.out.println("[SERVER] New client connected from: " + client.getInetAddress().getHostAddress());
+
                 ClientHandler handler = new ClientHandler(client, this);
                 new Thread(handler).start();
             }
@@ -84,12 +88,12 @@ public class Server {
             ObjectInputStream i = null;
 
             try {
-                // create input streams and upgrade them
+                System.out.println("[HANDLER] Started for client: " + client.getInetAddress().getHostAddress());
+
                 o = new ObjectOutputStream(client.getOutputStream());
                 o.flush();
                 i = new ObjectInputStream(client.getInputStream());
 
-                // request loop
                 while (true) {
                     Object request = i.readObject();
 
@@ -97,13 +101,18 @@ public class Server {
                         break;
                     }
 
+                    System.out.println("[REQUEST RECEIVED] " + formatRequest((Request) request));
+
                     Response response = handleRequest((Request) request);
+
+                    System.out.println("[RESPONSE SENT] " + formatResponse(response));
+
                     o.writeObject(response);
                     o.flush();
                 }
             }
             catch (EOFException e) {
-                // client disconnected normally
+                System.out.println("[HANDLER] Client disconnected normally: " + client.getInetAddress().getHostAddress());
             }
             catch (IOException e) {
                 e.printStackTrace();
@@ -111,25 +120,50 @@ public class Server {
             catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
-            finally { // cleanup, close everything out
-                try {
-                    if (i != null) {
-                        i.close();
-                    }
-                    if (o != null) {
-                        o.close();
-                    }
-                    if (client != null && !client.isClosed()) {
-                        client.close();
-                    }
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
+            catch (Exception e) {
+                e.printStackTrace();   // add this
+            }
+            finally {
+                try { if (i != null) i.close(); } catch (IOException e) { e.printStackTrace(); }
+                try { if (o != null) o.close(); } catch (IOException e) { e.printStackTrace(); }
+                try { if (client != null && !client.isClosed()) client.close(); } catch (IOException e) { e.printStackTrace(); }
+
+                System.out.println("[HANDLER] Closed connection for client: " + client.getInetAddress().getHostAddress());
             }
         }
 
-        // placeholder for real server logic when we get to it -- this is where all the final validation will happen
+        // ---------------- DEBUG HELPERS ----------------
+
+        private String formatRequest(Request req) {
+            if (req == null) return "null request";
+
+            return "Request{type=" + req.getType()
+                    + ", userType=" + req.getUserType()
+                    + ", person=" + (req.getPerson() != null ? req.getPerson().getName() : "null")
+                    + ", amount=" + req.getAmount()
+                    + ", source=" + formatAccount(req.getSourceAccount())
+                    + ", target=" + formatAccount(req.getTargetAccount())
+                    + "}";
+        }
+
+        private String formatResponse(Response res) {
+            if (res == null) return "null response";
+
+            return "Response{type=" + res.getType()
+                    + ", text=\"" + res.getText() + "\"}";
+        }
+
+        private String formatAccount(Account acc) {
+            if (acc == null) return "null";
+
+            return "Account{type=" + acc.getTYPE()
+                    + ", status=" + acc.getSTATUS()
+                    + ", balance=" + acc.getBalance()
+                    + "}";
+        }
+
+        // ------------------------------------------------
+
         private Response handleRequest(Request request) {
             REQUEST_TYPE rtype = request.getType();
         	
@@ -174,11 +208,11 @@ public class Server {
         }
 
         // logs an event and returns a response in one step to reduce repeated code
-        private Response logAndRespond(TRANSACTION_TYPE logType, String logMessage, double amount,
+        private Response logAndRespond(Account account, TRANSACTION_TYPE logType, String logMessage, double amount,
                 String responseText, Response.RESPONSE_TYPE responseType) {
 
             // add event to logger
-            logger.logEvent(new Log(logType, logMessage, amount));
+            logger.logEvent(new Log(logType, logMessage, amount, account.getLogKey()));
 
             // persist logs to file
             logger.saveLogs();
@@ -188,10 +222,11 @@ public class Server {
         }
 
         // converts a validation failure into a logged error response
-        private Response validationErrorResponse(ValidationMessage result, double amount) {
+        private Response validationErrorResponse(Account account, ValidationMessage result, double amount) {
 
             // log the validation error and return it as a response
             return logAndRespond(
+                    account,
                     Log.TRANSACTION_TYPE.ERROR,
                     result.getMsg().toString(),
                     amount,
@@ -341,8 +376,7 @@ public class Server {
 
             ValidationMessage result = runDepositValidation(account, req.getPerson(), req.getAmount());
             if (result != null && !result.passed()) {
-                return validationErrorResponse(result, req.getAmount());
-            }
+            	return validationErrorResponse(account, result, req.getAmount());            }
 
             // use synchronized so that this account cannot be modified by two threads at once
             synchronized (account) {
@@ -352,6 +386,7 @@ public class Server {
             }
 
             return logAndRespond(
+            		account,
                     Log.TRANSACTION_TYPE.DEPOSIT,
                     "deposit successful",
                     req.getAmount(),
@@ -394,7 +429,7 @@ public class Server {
 
             ValidationMessage result = runWithdrawValidation(account, req.getPerson(), req.getAmount());
             if (result != null && !result.passed()) {
-                return validationErrorResponse(result, req.getAmount());
+                return validationErrorResponse(account, result, req.getAmount());
             }
 
             // use synchronized so that this account cannot be modified by two threads at once
@@ -409,6 +444,7 @@ public class Server {
             }
 
             return logAndRespond(
+            		account,
                     Log.TRANSACTION_TYPE.WITHDRAWAL,
                     "withdrawal successful",
                     req.getAmount(),
@@ -447,6 +483,7 @@ public class Server {
             }
 
             return logAndRespond(
+            		account,
                     Log.TRANSACTION_TYPE.OTHER,
                     "account opened",
                     0.0,
@@ -498,6 +535,7 @@ public class Server {
             }
 
             return logAndRespond(
+            		account,
                     Log.TRANSACTION_TYPE.OTHER,
                     "account closed",
                     0.0,
@@ -540,7 +578,7 @@ public class Server {
 
             ValidationMessage result = runTransferValidation(source, target, req.getPerson(), req.getAmount());
             if (result != null && !result.passed()) {
-                return validationErrorResponse(result, req.getAmount());
+                return validationErrorResponse(source, result, req.getAmount());
             }
 
             // use nested synchronized blocks so both accounts are updated together
@@ -558,14 +596,23 @@ public class Server {
                     target.setLastUsed(now);
                 }
             }
-
-            return logAndRespond(
+            logger.logEvent(new Log(
                     Log.TRANSACTION_TYPE.TRANSFER,
-                    "transfer successful",
+                    "transfer sent to " + target.getLogKey(),
                     req.getAmount(),
-                    "Transfer successful",
-                    Response.RESPONSE_TYPE.SUCCESS
-            );
+                    source.getLogKey()
+            ));
+
+            logger.logEvent(new Log(
+                    Log.TRANSACTION_TYPE.TRANSFER,
+                    "transfer received from " + source.getLogKey(),
+                    req.getAmount(),
+                    target.getLogKey()
+            ));
+
+            logger.saveLogs();
+
+            return new Response("Transfer successful", Response.RESPONSE_TYPE.SUCCESS);            
         }
 
         // handles account view requests
