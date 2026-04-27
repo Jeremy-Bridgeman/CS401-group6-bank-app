@@ -4,6 +4,13 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 public class Customer extends Person {
+	
+	public enum ACCESS_CHANNEL {
+	    NONE,
+	    ATM,
+	    TELLER
+	}
+	
     private static final long serialVersionUID = 1L;
     
     private LocalDate joinDate;
@@ -11,6 +18,7 @@ public class Customer extends Person {
     private LocalDate lastAtmVisit;
     private String username;
     private int pin;
+    private ACCESS_CHANNEL activeChannel;
     
     public Customer() {
         super();
@@ -19,6 +27,7 @@ public class Customer extends Person {
         this.lastAtmVisit = null;
         this.username = "";
         this.pin = 0;
+        this.activeChannel = ACCESS_CHANNEL.NONE;
     }
 
     public Customer(String firstName, String lastName, Address address, String username, int pin) {
@@ -29,6 +38,7 @@ public class Customer extends Person {
         this.username = requireUsername(username);
         validatePin(pin);
         this.pin = pin;
+        this.activeChannel = ACCESS_CHANNEL.NONE;
     }
     
     public LocalDate getJoinDate() {
@@ -100,6 +110,41 @@ public class Customer extends Person {
         Objects.requireNonNull(account, "account cannot be null");
         validateAmount(amount);
         return account.withdraw(amount);
+    }
+    
+    public ACCESS_CHANNEL getActiveChannel() {
+        return activeChannel;
+    }
+
+    public boolean isUsingAtm() {
+        return activeChannel == ACCESS_CHANNEL.ATM;
+    }
+
+    public boolean isUsingTeller() {
+        return activeChannel == ACCESS_CHANNEL.TELLER;
+    }
+
+    public void startAtmSession() {
+        if (activeChannel != ACCESS_CHANNEL.NONE) {
+            throw new IllegalStateException("customer already has an active session through " + activeChannel);
+        }
+        activeChannel = ACCESS_CHANNEL.ATM;
+        markAtmVisit();
+    }
+
+    public void startTellerSession() {
+        if (activeChannel != ACCESS_CHANNEL.NONE) {
+            throw new IllegalStateException("customer already has an active session through " + activeChannel);
+        }
+        activeChannel = ACCESS_CHANNEL.TELLER;
+        markTellerVisit();
+    }
+
+    public void endSession() {
+        if (activeChannel == ACCESS_CHANNEL.NONE) {
+            throw new IllegalStateException("customer does not have an active ATM or teller session");
+        }
+        activeChannel = ACCESS_CHANNEL.NONE;
     }
     
     @Override

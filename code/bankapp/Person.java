@@ -14,13 +14,17 @@ public class Person implements Serializable{
 	
 	
 	public Person(String firstName, String lastName, Address address) {
-		this.firstName = firstName;
-		this.lastName = lastName;
-		this.address = address;
+	    setFirstName(firstName);
+	    setLastName(lastName);
+	    setAddress(address);
 	}
 	
 	public String getName() {
-		return firstName + " " + lastName;
+	    String fullName = ((firstName == null ? "" : firstName) + " " + (lastName == null ? "" : lastName)).trim();
+	    if (fullName.isBlank()) {
+	        throw new IllegalStateException("name is blank");
+	    }
+	    return fullName;
 	}
 	
 	public String getFirstName() {
@@ -28,7 +32,10 @@ public class Person implements Serializable{
 	}
 	
 	public void setFirstName(String firstName) {
-		this.firstName = firstName;
+	    if (firstName == null) {
+	        throw new IllegalArgumentException("first name cannot be null");
+	    }
+	    this.firstName = firstName.trim();
 	}
 	
 	public String getLastName() {
@@ -36,7 +43,10 @@ public class Person implements Serializable{
 	}
 
 	public void setLastName(String lastName) {
-		this.lastName = lastName;
+	    if (lastName == null) {
+	        throw new IllegalArgumentException("last name cannot be null");
+	    }
+	    this.lastName = lastName.trim();
 	}
 	
 	public Address getAddress() {
@@ -44,8 +54,11 @@ public class Person implements Serializable{
 	}
 	
 	public void setAddress(Address address) {
-        this.address = address;
-    }
+	    if (address == null) {
+	        throw new IllegalArgumentException("address cannot be null");
+	    }
+	    this.address = address;
+	}
 	
 	@Override
 	public String toString() {

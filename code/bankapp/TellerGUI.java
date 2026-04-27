@@ -11,11 +11,13 @@ public class TellerGUI extends JFrame {
     private final Teller teller;
     private final Account account;
     private final BankClientFacade client;
+    private final Customer customer;
 
     private JTextField amountField;
 
-    public TellerGUI(Teller teller, Account account, BankClientFacade client) {
+    public TellerGUI(Teller teller, Customer customer, Account account, BankClientFacade client) {
         this.teller = Objects.requireNonNull(teller);
+        this.customer = Objects.requireNonNull(customer);
         this.account = Objects.requireNonNull(account);
         this.client = Objects.requireNonNull(client);
 
@@ -54,18 +56,26 @@ public class TellerGUI extends JFrame {
         JButton balanceBtn = new JButton("Check Balance");
         JButton depositBtn = new JButton("Deposit");
         JButton withdrawBtn = new JButton("Withdraw");
+        JButton startSessionBtn = new JButton("Start Session");
+        JButton endSessionBtn = new JButton("End Session");
 
         styleButton(balanceBtn);
         styleButton(depositBtn);
         styleButton(withdrawBtn);
+        styleButton(startSessionBtn);
+        styleButton(endSessionBtn);
 
         balanceBtn.addActionListener(e -> checkBalance());
         depositBtn.addActionListener(e -> deposit());
         withdrawBtn.addActionListener(e -> withdraw());
+        startSessionBtn.addActionListener(e -> startSession());
+        endSessionBtn.addActionListener(e -> endSession());
 
         buttonPanel.add(balanceBtn);
         buttonPanel.add(depositBtn);
         buttonPanel.add(withdrawBtn);
+        buttonPanel.add(startSessionBtn);
+        buttonPanel.add(endSessionBtn);
 
         center.add(amountPanel);
         center.add(buttonPanel);
@@ -76,12 +86,18 @@ public class TellerGUI extends JFrame {
     }
 
     private void checkBalance() {
-        Response response = client.viewAccount(teller, Request.USER_TYPE.TELLER, account);
-        showResponse(response, "Balance");
+        try {
+            requireActiveSession();
+            Response response = client.viewAccount(teller, Request.USER_TYPE.TELLER, account);
+            showResponse(response, "Balance");
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
     }
 
     private void deposit() {
         try {
+            requireActiveSession();
             double amount = parseAmount();
             Response response = client.deposit(teller, Request.USER_TYPE.TELLER, account, amount);
             showResponse(response, "Deposit");
@@ -93,6 +109,7 @@ public class TellerGUI extends JFrame {
 
     private void withdraw() {
         try {
+            requireActiveSession();
             double amount = parseAmount();
             Response response = client.withdraw(teller, Request.USER_TYPE.TELLER, account, amount);
             showResponse(response, "Withdraw");
@@ -105,15 +122,37 @@ public class TellerGUI extends JFrame {
     private double parseAmount() {
         String text = amountField.getText();
         if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("Enter an amount");
+            throw new IllegalArgumentException("enter an amount");
         }
-        return Double.parseDouble(text.trim());
+
+        try {
+            double amount = Double.parseDouble(text.trim());
+            if (amount <= 0) {
+                throw new IllegalArgumentException("amount must be greater than 0");
+            }
+            return amount;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("amount must be a valid number");
+        }
     }
 
     private void showResponse(Response response, String title) {
-        int messageType = response.getType() == Response.RESPONSE_TYPE.ERROR ? JOptionPane.ERROR_MESSAGE : JOptionPane.INFORMATION_MESSAGE;
+        if (response == null) {
+            showError("operation failed: response was null");
+            return;
+        }
 
-        JOptionPane.showMessageDialog(this, response.getText(), title, messageType);
+        String text = response.getText();
+        if (text == null || text.trim().isEmpty()) {
+            text = "operation completed but response text was empty";
+        }
+
+        int messageType =
+            response.getType() == Response.RESPONSE_TYPE.ERROR
+                ? JOptionPane.ERROR_MESSAGE
+                : JOptionPane.INFORMATION_MESSAGE;
+
+        JOptionPane.showMessageDialog(this, text, title, messageType);
     }
 
     private void showError(String msg) {
@@ -123,5 +162,46 @@ public class TellerGUI extends JFrame {
     private void styleButton(JButton b) {
         b.setFont(new Font("SansSerif", Font.BOLD, 16));
         b.setPreferredSize(new Dimension(150, 40));
+    }
+    
+    private void startSession() {
+        try {
+            teller.beginSession(customer);
+            customer.startTellerSession();
+            showResponse(
+                new Response(
+                    "Teller session started for " + customer.getName()
+                        + " at register #" + teller.getRegisterNumber(),
+                    Response.RESPONSE_TYPE.INFO
+                ),
+                "Session"
+            );
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+
+    private void endSession() {
+        try {
+            teller.endSession();
+            customer.endSession();
+            showResponse(
+                new Response(
+                    "Teller session ended for register #" + teller.getRegisterNumber(),
+                    Response.RESPONSE_TYPE.INFO
+                ),
+                "Session"
+            );
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+
+    private void requireActiveSession() {
+        if (!teller.isCustomerPresent()) {
+            throw new IllegalStateException(
+                "cannot complete teller operation: no customer is present at the register"
+            );
+        }
     }
 }

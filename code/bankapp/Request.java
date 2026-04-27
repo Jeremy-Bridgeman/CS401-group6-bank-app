@@ -14,6 +14,7 @@ public class Request implements Serializable {
     private final Account targetAccount;
     private final double amount;
     private final String text;
+    private final boolean customerPresent;
 
     public enum REQUEST_TYPE {
         WITHDRAW,
@@ -33,7 +34,7 @@ public class Request implements Serializable {
         ATM
     }
 
-    public Request(REQUEST_TYPE t, USER_TYPE u, Person p, Account s, Account target, double a, String txt) {
+    public Request(REQUEST_TYPE t, USER_TYPE u, Person p, Account s, Account target, double a, String txt, boolean customerPresent) {
         type = t;
         userType = u;
         person = p;
@@ -41,6 +42,7 @@ public class Request implements Serializable {
         targetAccount = target;
         amount = a;
         text = txt;
+        this.customerPresent = customerPresent;
     }
 
     public REQUEST_TYPE getType() {
@@ -73,7 +75,6 @@ public class Request implements Serializable {
     // no setters
 
 	public boolean isCustomerPresent() {
-		// TODO Auto-generated method stub
-		return false;
+		return customerPresent;
 	}
 }

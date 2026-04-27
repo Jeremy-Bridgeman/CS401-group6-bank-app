@@ -112,15 +112,37 @@ public class ManagerGUI extends JFrame {
     private double parseAmount() {
         String text = amountField.getText();
         if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("Enter an amount");
+            throw new IllegalArgumentException("enter an amount");
         }
-        return Double.parseDouble(text.trim());
+
+        try {
+            double amount = Double.parseDouble(text.trim());
+            if (amount <= 0) {
+                throw new IllegalArgumentException("amount must be greater than 0");
+            }
+            return amount;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("amount must be a valid number");
+        }
     }
 
     private void showResponse(Response response, String title) {
-        int messageType = response.getType() == Response.RESPONSE_TYPE.ERROR ? JOptionPane.ERROR_MESSAGE : JOptionPane.INFORMATION_MESSAGE;
+        if (response == null) {
+            showError("operation failed: response was null");
+            return;
+        }
 
-        JOptionPane.showMessageDialog(this, response.getText(), title, messageType);
+        String text = response.getText();
+        if (text == null || text.trim().isEmpty()) {
+            text = "operation completed but response text was empty";
+        }
+
+        int messageType =
+            response.getType() == Response.RESPONSE_TYPE.ERROR
+                ? JOptionPane.ERROR_MESSAGE
+                : JOptionPane.INFORMATION_MESSAGE;
+
+        JOptionPane.showMessageDialog(this, text, title, messageType);
     }
 
     private void showError(String msg) {

@@ -18,12 +18,12 @@ public class Address implements Serializable {
 	}
 	
 	public Address(int streetNumber, String apartmentNumber, String street, String city, String state, String zipCode) {
-		this.streetNumber = streetNumber;
-		this.apartmentNumber = apartmentNumber;
-		this.street = street;
-		this.city = city;
-		this.state = state;
-		this.zipCode = zipCode;
+	    this.streetNumber = streetNumber;
+	    this.apartmentNumber = apartmentNumber == null ? "" : apartmentNumber.trim();
+	    this.street = street == null ? "" : street.trim();
+	    this.city = city == null ? "" : city.trim();
+	    this.state = state == null ? "" : state.trim();
+	    this.zipCode = zipCode == null ? "" : zipCode.trim();
 	}
 	
 	public int getStreetNumber() {
@@ -39,7 +39,7 @@ public class Address implements Serializable {
     }
 
     public void setApartmentNumber(String apartmentNumber) {
-        this.apartmentNumber = apartmentNumber;
+        this.apartmentNumber = apartmentNumber == null ? "" : apartmentNumber.trim();
     }
 
     public String getStreet() {
@@ -47,7 +47,7 @@ public class Address implements Serializable {
     }
 
     public void setStreet(String street) {
-        this.street = street;
+        this.street = street == null ? "" : street.trim();
     }
 
     public String getCity() {
@@ -55,7 +55,7 @@ public class Address implements Serializable {
     }
 
     public void setCity(String city) {
-        this.city = city;
+        this.city = city == null ? "" : city.trim();
     }
 
     public String getZipCode() {
@@ -63,7 +63,7 @@ public class Address implements Serializable {
     }
 
     public void setZipCode(String zipCode) {
-        this.zipCode = zipCode;
+        this.zipCode = zipCode == null ? "" : zipCode.trim();
     }
 
     public String getState() {
@@ -71,7 +71,7 @@ public class Address implements Serializable {
     }
 
     public void setState(String state) {
-        this.state = state;
+        this.state = state == null ? "" : state.trim();
     }
     
     public String print() {
