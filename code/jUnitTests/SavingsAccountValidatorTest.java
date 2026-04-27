@@ -22,8 +22,16 @@ public class SavingsAccountValidatorTest {
         validator = new SavingsAccountValidator();
         authorizedUser = new Person();
         unauthorizedUser = new Person();
-        account = ValidatorTestHelper.makeAccount(new SavingsAccount(), authorizedUser, 800.0);
-        account.setTYPE(Account.ACCOUNT_TYPE.SAVINGS);
+        account = ValidatorTestHelper.makeAccount(
+        	    new SavingsAccount(
+        	        800.0,
+        	        Account.ACCOUNT_STATUS.OPEN,
+        	        Account.ACCOUNT_TYPE.SAVINGS,
+        	        authorizedUser
+        	    ),
+        	    authorizedUser,
+        	    800.0
+        	);        account.setTYPE(Account.ACCOUNT_TYPE.SAVINGS);
     }
 
     @Test

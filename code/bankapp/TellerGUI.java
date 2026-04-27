@@ -153,6 +153,7 @@ public class TellerGUI extends JFrame {
                 : JOptionPane.INFORMATION_MESSAGE;
 
         JOptionPane.showMessageDialog(this, text, title, messageType);
+        JOptionPane.showMessageDialog(this, response.getMessage(), title, messageType);
     }
 
     private void showError(String msg) {

@@ -22,8 +22,16 @@ public class CreditAccountValidatorTest {
         validator = new CreditAccountValidator();
         authorizedUser = new Person();
         unauthorizedUser = new Person();
-        account = ValidatorTestHelper.makeAccount(new CreditAccount(), authorizedUser, 1000.0);
-        account.setTYPE(Account.ACCOUNT_TYPE.CREDIT);
+        account = ValidatorTestHelper.makeAccount(
+        	    new CreditAccount(
+        	        1000.0,
+        	        Account.ACCOUNT_STATUS.OPEN,
+        	        Account.ACCOUNT_TYPE.CREDIT,
+        	        authorizedUser
+        	    ),
+        	    authorizedUser,
+        	    1000.0
+        	);        account.setTYPE(Account.ACCOUNT_TYPE.CREDIT);
     }
 
     @Test

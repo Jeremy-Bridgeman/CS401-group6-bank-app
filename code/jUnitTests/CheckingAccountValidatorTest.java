@@ -23,8 +23,16 @@ public class CheckingAccountValidatorTest {
         validator = new CheckingAccountValidator();
         authorizedUser = new Person();
         unauthorizedUser = new Person();
-        account = ValidatorTestHelper.makeAccount(new CheckingAccount(), authorizedUser, 500.0);
-        account.setTYPE(Account.ACCOUNT_TYPE.CHECKING);
+        account = ValidatorTestHelper.makeAccount(
+        	    new CheckingAccount(
+        	        500.0,
+        	        Account.ACCOUNT_STATUS.OPEN,
+        	        Account.ACCOUNT_TYPE.CHECKING,
+        	        authorizedUser
+        	    ),
+        	    authorizedUser,
+        	    500.0
+        	);        account.setTYPE(Account.ACCOUNT_TYPE.CHECKING);
     }
 
     @Test

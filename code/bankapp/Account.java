@@ -20,14 +20,20 @@ public class Account implements Serializable {
 	private Date lastUsed; // set to a new date whenever 
 	private ACCOUNT_STATUS STATUS;
 	private ACCOUNT_TYPE TYPE;
-	private ArrayList<Person>authorizedUsers;
+	private ArrayList<Person> authorizedUsers = new ArrayList<Person>();
+	private String accountNumber;
 	
 	
 	// constructor
 	public Account(double balance, ACCOUNT_STATUS status, ACCOUNT_TYPE type, Person user) {
+		this(balance, status, type, user, UUID.randomUUID().toString());
+	}
+
+	public Account(double balance, ACCOUNT_STATUS status, ACCOUNT_TYPE type, Person user, String accountNumber) {
 		this.balance = balance;
 		STATUS = status;
 		TYPE = type;
+		this.accountNumber = accountNumber;
 		// add user to array
 		authorizedUsers.add(user);
 		// update lastUsed
@@ -130,6 +136,18 @@ public class Account implements Serializable {
 	public ArrayList<Person> getAuthorizedUsers() {
 		return authorizedUsers;
 	}
+
+	public String getAccountNumber() {
+		return accountNumber;
+	}
+
+	public String getLogKey() {
+		String owner = "UNKNOWN";
+		if (!authorizedUsers.isEmpty() && authorizedUsers.get(0) != null) {
+			owner = authorizedUsers.get(0).getName();
+		}
+		return owner + "|" + accountNumber;
+	}
 	
 	// setters
 	public void setBalance(double balance) {
@@ -151,6 +169,11 @@ public class Account implements Serializable {
 	public void setAuthorizedUsers(ArrayList<Person> authorizedUsers) {
 		this.authorizedUsers = authorizedUsers;
 	}
+
+	public void setAccountNumber(String accountNumber) {
+		this.accountNumber = accountNumber;
+	}
+
 	public void flag() {
 		// logic for flagging the account here
 	}

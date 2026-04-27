@@ -6,7 +6,7 @@ import java.io.*;
 public class Response implements Serializable {
 	
 	private static final long serialVersionUID = 1L; // eclipse said to do this, so i did. I dont think it matters for our project
-	private final String text;
+	private final String message;
 	private final RESPONSE_TYPE type;
 	
 	public enum RESPONSE_TYPE {
@@ -17,16 +17,19 @@ public class Response implements Serializable {
 		LOG
 	}
 	
-	public Response(String t, RESPONSE_TYPE r) {
-		text = t;	// set text
-		type = r;	// set response type
+	public Response(String message, RESPONSE_TYPE type) {
+		this.message = message;
+		this.type = type;
+		
+		// changing this text = t set text
+		// changing this too type = r;	set response 
 	}
 	
 	public RESPONSE_TYPE getType() {
 		return type;
 	}
-	public String getText() {
-		return text;
+	public String getMessage() {
+		return message;
 	}
 	// no setters
 }

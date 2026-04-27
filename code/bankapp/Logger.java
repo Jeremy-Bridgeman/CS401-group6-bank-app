@@ -11,7 +11,7 @@ public class Logger {
 	// eager singleton instance (created once when class loads)
 	private static final Logger instance = new Logger();
 
-	private ArrayList<Log> logs = new ArrayList<Log>();
+	private HashMap<String, ArrayList<Log>> logsByAccount = new HashMap<String, ArrayList<Log>>();
 	private String filename = "logs.txt";
 
 	// private constructor prevents external instantiation
@@ -26,7 +26,25 @@ public class Logger {
 	}
 
 	public synchronized ArrayList<Log> getLogs() {
-		return new ArrayList<Log>(logs); // return a copy of the list
+		ArrayList<Log> allLogs = new ArrayList<Log>();
+
+		for (ArrayList<Log> bucket : logsByAccount.values()) {
+			allLogs.addAll(bucket);
+		}
+
+		return allLogs; // return a combined copy
+	}
+
+	public synchronized ArrayList<Log> getLogsForAccount(String accountKey) {
+		ArrayList<Log> bucket = logsByAccount.get(accountKey);
+		if (bucket == null) {
+			return new ArrayList<Log>();
+		}
+		return new ArrayList<Log>(bucket);
+	}
+
+	public synchronized Set<String> getAccountKeys() {
+		return new HashSet<String>(logsByAccount.keySet());
 	}
 	
 	// loads logs from file into memory
@@ -51,7 +69,7 @@ public class Logger {
 				try {
 					// delegate parsing to Log class
 					Log log = Log.fromFileString(line);
-					logs.add(log);
+					addToBucket(log);
 				} catch (Exception e) {
 					// prevents one bad line from crashing everything, but still report the error
 					System.out.println("Skipping bad log line: " + line);
@@ -64,9 +82,19 @@ public class Logger {
 			e.printStackTrace();
 		}
 	}
+
+	private void addToBucket(Log log) {
+		String key = log.getAccountKey();
+
+		if (!logsByAccount.containsKey(key)) {
+			logsByAccount.put(key, new ArrayList<Log>());
+		}
+
+		logsByAccount.get(key).add(log);
+	}
 	
 	public synchronized void logEvent(Log event) {
-		logs.add(event);
+		addToBucket(event);
 	}
 	
 	// writes all logs to file
@@ -75,9 +103,11 @@ public class Logger {
 		try {
 			FileWriter writer = new FileWriter(filename); // overwrite each time
 
-			for (Log log: logs) {
-				// USE LINESEPARATOR HERE SO WE DONT HAVE STUPID WINDOWS CRLF CHARACTERS THAT CAUSE ISSUES
-				writer.write(log.toFileString() + System.lineSeparator());
+			for (ArrayList<Log> bucket : logsByAccount.values()) {
+				for (Log log : bucket) {
+					// USE LINESEPARATOR HERE SO WE DONT HAVE STUPID WINDOWS CRLF CHARACTERS THAT CAUSE ISSUES
+					writer.write(log.toFileString() + System.lineSeparator());
+				}
 			}
 			
 			writer.close();
@@ -86,8 +116,9 @@ public class Logger {
 			e.printStackTrace();
 		}
 	}
+
 	public synchronized void clearLogs() {
-		logs.clear();
+		logsByAccount.clear();
 	}
 
 	public synchronized void setFilename(String filename) {
@@ -99,7 +130,7 @@ public class Logger {
 	}
 
 	public synchronized void reloadLogs() {
-		logs.clear();
+		logsByAccount.clear();
 		loadLogs();
 	}
 }

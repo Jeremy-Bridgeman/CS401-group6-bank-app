@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import bankapp.Account;
 import bankapp.AccountValidator;
+import bankapp.CheckingAccount;
 import bankapp.Person;
 
 public class AccountValidatorTest {
@@ -21,8 +22,16 @@ public class AccountValidatorTest {
         validator = new AccountValidator();
         authorizedUser = new Person();
         unauthorizedUser = new Person();
-        account = ValidatorTestHelper.makeAccount(new Account(), authorizedUser, 500.0);
-    }
+        account = ValidatorTestHelper.makeAccount(
+        	    new CheckingAccount(
+        	        500.0,
+        	        Account.ACCOUNT_STATUS.OPEN,
+        	        Account.ACCOUNT_TYPE.CHECKING,
+        	        authorizedUser
+        	    ),
+        	    authorizedUser,
+        	    500.0
+        	);    }
 
     @Test
     public void validateAmount_positiveAmount_passes() {

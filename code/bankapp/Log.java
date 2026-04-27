@@ -11,6 +11,7 @@ public class Log {
 	private final TRANSACTION_TYPE type;
 	private final String comment;
 	private final double amount;
+	private final String accountKey;
 	
 	public enum TRANSACTION_TYPE {
 		WITHDRAWAL,
@@ -21,19 +22,21 @@ public class Log {
 	}
 	
 	// constructor used when creating a NEW log (uses current time)
-	public Log(TRANSACTION_TYPE t, String c, double a) {
+	public Log(TRANSACTION_TYPE t, String c, double a, String accountKey) {
 		date = new Date();
 		type = t;
 		comment = c;
 		amount = a;
+		this.accountKey = accountKey;
 	}
 
 	// constructor used when LOADING logs from file (uses stored timestamp)
-	public Log(Date d, TRANSACTION_TYPE t, String c, double a) {
+	public Log(Date d, TRANSACTION_TYPE t, String c, double a, String accountKey) {
 		date = d;
 		type = t;
 		comment = c;
 		amount = a;
+		this.accountKey = accountKey;
 	}
 
 	public Date getDate() {
@@ -52,20 +55,24 @@ public class Log {
 		return amount;
 	}
 
+	public String getAccountKey() {
+		return accountKey;
+	}
+
 	// converts log into a format safe for writing to file
-	// format: timestamp|TYPE|comment|amount
+	// format: timestamp|TYPE|comment|amount|accountKey
 	// we use timestamp instead of Date string so it is easier to parse and sort later
 	public String toFileString() {
-		return date.getTime() + "|" + type + "|" + comment + "|" + amount;
+		return date.getTime() + "|" + type + "|" + comment + "|" + amount + "|" + accountKey;
 	}
 
 	// parses a line from the file and reconstructs a Log object
 	// this keeps parsing logic out of Logger
 	public static Log fromFileString(String line) {
-		String[] parts = line.split("\\|"); // split on pipe character
+		String[] parts = line.split("\\|", 5); // split on pipe character
 
 		// basic validation so bad lines don't crash the program
-		if (parts.length != 4) {
+		if (parts.length != 5) {
 			throw new IllegalArgumentException("Malformed log line: " + line);
 		}
 
@@ -78,12 +85,13 @@ public class Log {
 		String comment = parts[2];
 
 		double amount = Double.parseDouble(parts[3]); // string --> double
+		String accountKey = parts[4];
 
-		return new Log(date, type, comment, amount);
+		return new Log(date, type, comment, amount, accountKey);
 	}
 
 	@Override
 	public String toString() {
-		return "date=" + date + ", type=" + type + ", comment=" + comment + ", amount=" + amount;
+		return "date=" + date + ", type=" + type + ", comment=" + comment + ", amount=" + amount + ", accountKey=" + accountKey;
 	}
 }
