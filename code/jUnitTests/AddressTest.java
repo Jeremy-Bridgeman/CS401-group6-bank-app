@@ -18,7 +18,7 @@ class AddressTest {
         Address address = new Address();
 
         assertEquals(0, address.getStreetNumber());
-        assertNull(address.getApartmentNumber());
+        assertEquals("", address.getApartmentNumber());
         assertEquals("", address.getStreet());
         assertEquals("", address.getCity());
         assertEquals("", address.getState());

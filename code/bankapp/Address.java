@@ -14,7 +14,7 @@ public class Address implements Serializable {
 	private String zipCode;
 	
 	public Address() {
-		this(0,null,"","","","");
+		this(0,"","","","","");
 	}
 	
 	public Address(int streetNumber, String apartmentNumber, String street, String city, String state, String zipCode) {
