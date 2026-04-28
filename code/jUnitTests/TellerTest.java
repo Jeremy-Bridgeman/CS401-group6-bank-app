@@ -18,9 +18,7 @@ class TellerTest {
 
     private static class TestAccount extends Account {
         TestAccount(double balance) {
-            setBalance(balance);
-            setSTATUS(Account.ACCOUNT_STATUS.OPEN);
-            setTYPE(Account.ACCOUNT_TYPE.CHECKING);
+            super(balance, Account.ACCOUNT_STATUS.OPEN, Account.ACCOUNT_TYPE.CHECKING, null); // make super call the correct constructor
             setAuthorizedUsers(new ArrayList<>());
             setLastUsed(new Date());
         }
@@ -60,7 +58,10 @@ class TellerTest {
     @Test
     void depositAndWithdrawDelegateToAccount() {
         Teller teller = new Teller("Alice", "Smith", new Address(), 42);
+        Customer customer = new Customer("Chris", "Tse", new Address(), "ctse01", 1234);
         TestAccount account = new TestAccount(200.0);
+
+        teller.beginSession(customer);
 
         double afterDeposit = teller.deposit(account, 25.0);
         double afterWithdraw = teller.withdraw(account, 50.0);
@@ -73,8 +74,11 @@ class TellerTest {
     @Test
     void transferMovesFundsBetweenAccounts() {
         Teller teller = new Teller("Alice", "Smith", new Address(), 42);
+        Customer customer = new Customer("Chris", "Tse", new Address(), "ctse01", 1234);
         TestAccount from = new TestAccount(500.0);
         TestAccount to = new TestAccount(75.0);
+
+        teller.beginSession(customer);
 
         double result = teller.transfer(from, to, 125.0);
 
@@ -96,7 +100,10 @@ class TellerTest {
     @Test
     void nonPositiveAmountThrowsException() {
         Teller teller = new Teller("Alice", "Smith", new Address(), 42);
+        Customer customer = new Customer("Chris", "Tse", new Address(), "ctse01", 1234);
         TestAccount account = new TestAccount(200.0);
+
+        teller.beginSession(customer);
 
         assertThrows(IllegalArgumentException.class, () -> teller.deposit(account, 0.0));
         assertThrows(IllegalArgumentException.class, () -> teller.withdraw(account, -10.0));

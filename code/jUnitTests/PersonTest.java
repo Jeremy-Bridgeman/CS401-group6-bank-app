@@ -18,7 +18,7 @@ class PersonTest {
     void defaultConstructorCreatesBlankPersonWithDefaultAddress() {
         Person person = new Person();
 
-        assertEquals(" ", person.getName());
+        assertEquals("", person.getName());
         assertEquals("", person.getFirstName());
         assertEquals("", person.getLastName());
         assertNotNull(person.getAddress());

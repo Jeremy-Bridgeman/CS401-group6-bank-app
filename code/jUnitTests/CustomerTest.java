@@ -19,17 +19,15 @@ class CustomerTest {
 
     private static class TestAccount extends Account {
         TestAccount(double balance) {
-            setBalance(balance);
-            setSTATUS(Account.ACCOUNT_STATUS.OPEN);
-            setTYPE(Account.ACCOUNT_TYPE.CHECKING);
+            super(balance, Account.ACCOUNT_STATUS.OPEN, Account.ACCOUNT_TYPE.CHECKING, null); // make super call the correct constructor
             setAuthorizedUsers(new ArrayList<>());
             setLastUsed(new Date());
         }
 
         @Override
         public double withdraw(double amount) {
-            if (amount < 0) {
-                throw new IllegalArgumentException("amount must be non-negative");
+            if (amount <= 0) {
+                throw new IllegalArgumentException("amount must be positive");
             }
             if (getBalance() < amount) {
                 throw new IllegalArgumentException("insufficient funds");
