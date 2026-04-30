@@ -159,6 +159,10 @@ class ClientHandler implements Runnable {
             return handleSubmitTellerTransactionRequest(request);
         } else if (rtype == REQUEST_TYPE.TELLER_POLL_CUSTOMER_REQUEST) {
             return handleTellerPollCustomerRequest(request);
+        } else if (rtype == REQUEST_TYPE.MARK_TELLER_TRANSACTION_COMPLETE) {
+            return handleMarkTellerTransactionComplete(request);
+        } else if (rtype == REQUEST_TYPE.POLL_TELLER_TRANSACTION_RESULT) {
+            return handlePollTellerTransactionResult(request);
         } else if (rtype == REQUEST_TYPE.END_TELLER_SESSION) {
             return handleEndTellerSession(request);
         } else if (rtype == REQUEST_TYPE.AUTHENTICATE_CUSTOMER) {
@@ -170,6 +174,20 @@ class ClientHandler implements Runnable {
         } else {
             return new Response("Unknown Request", Response.RESPONSE_TYPE.INFO);
         }
+    }
+    
+    private Response handleMarkTellerTransactionComplete(Request req) {
+        if (!(req.getPerson() instanceof Teller)) {
+            return new Response("unable to mark teller transaction complete: requester was not a teller", Response.RESPONSE_TYPE.ERROR);
+        }
+        return server.markTellerTransactionComplete(req.getSessionId(), req.getSourceAccount(), req.getText());
+    }
+
+    private Response handlePollTellerTransactionResult(Request req) {
+        if (!(req.getPerson() instanceof Customer)) {
+            return new Response("unable to poll teller transaction result: requester was not a customer", Response.RESPONSE_TYPE.ERROR);
+        }
+        return server.pollTellerTransactionResult(req.getSessionId());
     }
     
     private Response handleSubmitTellerTransactionRequest(Request req) {

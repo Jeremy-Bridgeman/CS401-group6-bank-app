@@ -15,6 +15,7 @@ public class TellerGUI extends JFrame {
 
     private JTextField amountField;
     private JLabel sessionLabel;
+    private JLabel accountLabel;
     private String currentSessionId;
     private java.util.List<Account> customerAccounts;
     
@@ -238,6 +239,7 @@ public class TellerGUI extends JFrame {
             if (selected != null) {
                 this.account = selected;
                 sessionLabel.setText("Serving: " + customer.getName() + " | Active: " + account.getTYPE());
+                refreshAccountLabel();
             }
         } catch (Exception ex) {
             showError(ex.getMessage());
@@ -262,6 +264,9 @@ public class TellerGUI extends JFrame {
 
         sessionLabel = new JLabel("No active customer.");
         sessionLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
+
+        accountLabel = new JLabel("No active account.");
+        accountLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
 
         JPanel amountPanel = new JPanel(new BorderLayout(10, 10));
         JLabel label = new JLabel("Amount:");
@@ -317,6 +322,8 @@ public class TellerGUI extends JFrame {
         buttonPanel.add(endSessionBtn);
         
         center.add(sessionLabel);
+        center.add(Box.createVerticalStrut(6));
+        center.add(accountLabel);
         center.add(Box.createVerticalStrut(10));
         center.add(amountPanel);
         center.add(buttonPanel);
@@ -324,6 +331,19 @@ public class TellerGUI extends JFrame {
         root.add(center, BorderLayout.CENTER);
 
         setContentPane(root);
+    }
+    
+    private void refreshAccountLabel() {
+        if (account == null) {
+            accountLabel.setText("No active account.");
+            return;
+        }
+
+        accountLabel.setText(
+            "Account: " + account.getTYPE()
+            + " | Status: " + account.getSTATUS()
+            + " | Balance: " + account.getBalance()
+        );
     }
     
     private void checkCustomerRequest() {
@@ -414,11 +434,12 @@ public class TellerGUI extends JFrame {
         }
 
         if (this.account == null) {
-        	sessionLabel.setText("Serving: " + customer.getName() + " | No account yet - click Open New Account");
-        	} 
-        else {
+            sessionLabel.setText("Serving: " + customer.getName() + " | No account yet - click Open New Account");
+        } else {
             sessionLabel.setText("Serving: " + customer.getName());
         }
+
+        refreshAccountLabel();
     }
 
     private void checkBalance() {
@@ -436,6 +457,22 @@ public class TellerGUI extends JFrame {
             requireActiveSession();
             double amount = parseAmount();
             Response response = client.deposit(teller, Request.USER_TYPE.TELLER, account, amount);
+
+            if (response != null && response.getType() != Response.RESPONSE_TYPE.ERROR) {
+                refreshAccountLabel();
+
+                if (currentSessionId != null) {
+                    client.markTellerTransactionComplete(
+                        teller,
+                        currentSessionId,
+                        account,
+                        "Deposit completed. Account: " + account.getTYPE()
+                            + ", Status: " + account.getSTATUS()
+                            + ", Balance: " + account.getBalance()
+                    );
+                }
+            }
+
             showResponse(response, "Deposit");
             amountField.setText("");
         } catch (Exception ex) {
@@ -448,6 +485,22 @@ public class TellerGUI extends JFrame {
             requireActiveSession();
             double amount = parseAmount();
             Response response = client.withdraw(teller, Request.USER_TYPE.TELLER, account, amount);
+
+            if (response != null && response.getType() != Response.RESPONSE_TYPE.ERROR) {
+                refreshAccountLabel();
+
+                if (currentSessionId != null) {
+                    client.markTellerTransactionComplete(
+                        teller,
+                        currentSessionId,
+                        account,
+                        "Withdrawal completed. Account: " + account.getTYPE()
+                            + ", Status: " + account.getSTATUS()
+                            + ", Balance: " + account.getBalance()
+                    );
+                }
+            }
+
             showResponse(response, "Withdraw");
             amountField.setText("");
         } catch (Exception ex) {
@@ -469,6 +522,7 @@ public class TellerGUI extends JFrame {
                 account = null;
                 currentSessionId = null;
                 sessionLabel.setText("No active customer.");
+                refreshAccountLabel();
                 showResponse(response, "Session");
                 readyForNextCustomer();
                 return;
@@ -484,6 +538,7 @@ public class TellerGUI extends JFrame {
             account = null;
             currentSessionId = null;
             sessionLabel.setText("No active customer.");
+            refreshAccountLabel();
             readyForNextCustomer();
         } catch (Exception ex) {
             showError(ex.getMessage());

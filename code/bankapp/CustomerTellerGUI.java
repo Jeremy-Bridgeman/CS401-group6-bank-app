@@ -3,6 +3,8 @@ package bankapp;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Objects;
 
 public class CustomerTellerGUI extends JFrame {
@@ -15,6 +17,8 @@ public class CustomerTellerGUI extends JFrame {
 
     private JTextField amountField;
     private JLabel statusLabel;
+    private JLabel accountLabel;
+    private final Timer resultTimer;
 
     public CustomerTellerGUI(Customer customer, BankClientFacade client, String sessionId, String tellerName) {
         this.customer = Objects.requireNonNull(customer);
@@ -23,12 +27,22 @@ public class CustomerTellerGUI extends JFrame {
         this.tellerName = tellerName == null ? "your teller" : tellerName;
 
         buildUi();
+
+        resultTimer = new Timer(1500, e -> pollTransactionResult());
+        resultTimer.start();
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                resultTimer.stop();
+            }
+        });
     }
 
     private void buildUi() {
         setTitle("Customer Teller Session - " + customer.getName());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(540, 220);
+        setSize(620, 260);
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -43,6 +57,9 @@ public class CustomerTellerGUI extends JFrame {
 
         statusLabel = new JLabel("Choose a request to send to the teller.");
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
+
+        accountLabel = new JLabel("No completed transaction yet.");
+        accountLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
 
         JPanel amountPanel = new JPanel(new BorderLayout(10, 10));
         JLabel amountLabel = new JLabel("Amount:");
@@ -68,6 +85,8 @@ public class CustomerTellerGUI extends JFrame {
         buttonPanel.add(closeBtn);
 
         center.add(statusLabel);
+        center.add(Box.createVerticalStrut(6));
+        center.add(accountLabel);
         center.add(Box.createVerticalStrut(10));
         center.add(amountPanel);
         center.add(buttonPanel);
@@ -98,6 +117,35 @@ public class CustomerTellerGUI extends JFrame {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void pollTransactionResult() {
+        Response response = client.pollTellerTransactionResult(customer, sessionId);
+        if (response == null) {
+            return;
+        }
+
+        if (response.getType() != Response.RESPONSE_TYPE.SUCCESS) {
+            return;
+        }
+
+        statusLabel.setText(response.getMessage());
+
+        if (response.getAccount() != null) {
+            Account updated = response.getAccount();
+            accountLabel.setText(
+                "Account: " + updated.getTYPE()
+                    + " | Status: " + updated.getSTATUS()
+                    + " | Balance: " + updated.getBalance()
+            );
+        }
+
+        JOptionPane.showMessageDialog(
+            this,
+            response.getMessage(),
+            "Transaction Complete",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private double parseAmount() {

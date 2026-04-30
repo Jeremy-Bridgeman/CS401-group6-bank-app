@@ -20,6 +20,7 @@ public class Server {
     private final Map<String, TellerAssignment> assignmentsBySessionId = new HashMap<String, TellerAssignment>();
     private final Map<String, String> pendingCustomerRequestActionBySessionId = new HashMap<String, String>();
     private final Map<String, Double> pendingCustomerRequestAmountBySessionId = new HashMap<String, Double>();
+    private final Map<String, Response> completedTransactionBySessionId = new HashMap<String, Response>();
     
     
     
@@ -381,6 +382,58 @@ public class Server {
             amount
         );
     }
+    
+    public synchronized Response markTellerTransactionComplete(String sessionId, Account account, String message) {
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            return new Response("unable to mark teller transaction complete: session id was blank", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        TellerAssignment assignment = assignmentsBySessionId.get(sessionId);
+        if (assignment == null) {
+            return new Response("unable to mark teller transaction complete: no active teller session found", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        Account updatedAccount = account != null ? account : assignment.getAccount();
+        if (updatedAccount == null) {
+            return new Response("unable to mark teller transaction complete: account was null", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        String finalMessage = message;
+        if (finalMessage == null || finalMessage.trim().isEmpty()) {
+            finalMessage = "Transaction completed. Balance: " + updatedAccount.getBalance()
+                + ", Status: " + updatedAccount.getSTATUS();
+        }
+
+        Response completion = new Response(
+            finalMessage,
+            Response.RESPONSE_TYPE.SUCCESS,
+            sessionId,
+            true,
+            -1,
+            assignment.getCustomer().getName(),
+            assignment.getTeller().getName(),
+            assignment.getCustomer(),
+            updatedAccount,
+            null,
+            false
+        );
+
+        completedTransactionBySessionId.put(sessionId, completion);
+        return new Response("transaction completion stored", Response.RESPONSE_TYPE.SUCCESS);
+    }
+
+    public synchronized Response pollTellerTransactionResult(String sessionId) {
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            return new Response("unable to poll teller transaction result: session id was blank", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        Response completion = completedTransactionBySessionId.remove(sessionId);
+        if (completion != null) {
+            return completion;
+        }
+
+        return new Response("no completed teller transaction yet", Response.RESPONSE_TYPE.INFO);
+    }
 
     public synchronized Response endTellerSession(String sessionId, Teller teller) {
         if (sessionId == null || sessionId.trim().isEmpty()) {
@@ -390,6 +443,7 @@ public class Server {
         TellerAssignment assignment = assignmentsBySessionId.remove(sessionId);
         pendingCustomerRequestActionBySessionId.remove(sessionId);
         pendingCustomerRequestAmountBySessionId.remove(sessionId);
+        completedTransactionBySessionId.remove(sessionId);
 
         if (assignment == null) {
             return new Response("no active teller session found", Response.RESPONSE_TYPE.WARNING);
@@ -403,7 +457,7 @@ public class Server {
 
         return new Response("teller session ended", Response.RESPONSE_TYPE.SUCCESS);
     }
-
+    
     public synchronized TellerAssignment getAssignmentBySessionId(String sessionId) {
         return assignmentsBySessionId.get(sessionId);
     }

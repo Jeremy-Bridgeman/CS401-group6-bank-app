@@ -375,6 +375,42 @@ public class BankClientFacade {
             return new Response("teller poll customer request failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
         }
     }
+    
+    public Response markTellerTransactionComplete(Teller teller, String sessionId, Account account, String message) {
+        try {
+            Request request = buildRequest(
+                Request.REQUEST_TYPE.MARK_TELLER_TRANSACTION_COMPLETE,
+                teller,
+                Request.USER_TYPE.TELLER,
+                account,
+                null,
+                0.0,
+                message,
+                sessionId
+            );
+            return send(request);
+        } catch (Exception e) {
+            return new Response("mark teller transaction complete failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
+        }
+    }
+
+    public Response pollTellerTransactionResult(Customer customer, String sessionId) {
+        try {
+            Request request = buildRequest(
+                Request.REQUEST_TYPE.POLL_TELLER_TRANSACTION_RESULT,
+                customer,
+                Request.USER_TYPE.CUSTOMER,
+                null,
+                null,
+                0.0,
+                "Poll teller transaction result",
+                sessionId
+            );
+            return send(request);
+        } catch (Exception e) {
+            return new Response("poll teller transaction result failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
+        }
+    }
 
     public Response tellerReady(Teller teller) {
         try {
