@@ -52,25 +52,33 @@ public class WaitingForTellerDialog extends JFrame {
             @Override
             public void windowClosed(WindowEvent e) {
                 timer.stop();
-                try {
-                    customer.endSession();
-                } catch (Exception ignored) { }
+                if (!assignedToTeller) {
+                    try {
+                        customer.endSession();
+                    } catch (Exception ignored) { }
+                }
             }
         });
     }
 
+    private boolean assignedToTeller = false;
     private void pollQueue() {
         Response response = client.checkTellerQueue(customer, sessionId);
         updateStatus(response);
 
         if (response != null && response.isReady()) {
             timer.stop();
+            assignedToTeller = true;
+
             JOptionPane.showMessageDialog(
                 this,
                 "Teller " + response.getAssignedTellerName() + " is ready for you.",
                 "Teller Ready",
                 JOptionPane.INFORMATION_MESSAGE
             );
+
+            CustomerTellerGUI gui = new CustomerTellerGUI(customer, client, sessionId, response.getAssignedTellerName());
+            gui.setVisible(true);
             dispose();
         }
     }

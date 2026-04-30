@@ -2,6 +2,7 @@ package bankapp;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+
 import java.awt.*;
 import java.util.Objects;
 
@@ -64,7 +65,17 @@ public class ATMGUI extends JFrame {
             }
 
             this.customer = response.getCustomer();
-            this.account = response.getAccount();
+
+            java.util.List<Account> accountList = response.getAccounts();
+            if (accountList != null && !accountList.isEmpty()) {
+                this.account = chooseAccount(accountList);
+                if (this.account == null) {
+                    dispose();
+                    return;
+                }
+            } else {
+                this.account = response.getAccount();
+            }
 
             if (this.customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
                 this.customer.startAtmSession();
@@ -75,6 +86,34 @@ public class ATMGUI extends JFrame {
             JOptionPane.showMessageDialog(this, e.getMessage(), "ATM Login", JOptionPane.ERROR_MESSAGE);
             dispose();
         }
+    }
+    private Account chooseAccount(java.util.List<Account> accounts) {
+        if (accounts == null || accounts.isEmpty()) {
+            return null;
+        }
+
+        String[] options = new String[accounts.size()];
+        for (int i = 0; i < accounts.size(); i++) {
+            Account a = accounts.get(i);
+            options[i] = a.getTYPE() + " | #" + a.getAccountNumber() + " | Balance: " + a.getBalance();
+        }
+
+        int selected = JOptionPane.showOptionDialog(
+            this,
+            "Choose an account:",
+            "Select Account",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        if (selected < 0) {
+            return null;
+        }
+
+        return accounts.get(selected);
     }
 
     private void buildUi() {

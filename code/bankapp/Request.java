@@ -32,6 +32,8 @@ public class Request implements Serializable {
         CHECK_TELLER_QUEUE,
         TELLER_READY,
         TELLER_POLL_ASSIGNMENT,
+        SUBMIT_TELLER_TRANSACTION_REQUEST,
+        TELLER_POLL_CUSTOMER_REQUEST,
         END_TELLER_SESSION,
         OTHER
     }

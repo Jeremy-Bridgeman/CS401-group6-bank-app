@@ -14,7 +14,7 @@ public class QueuedCustomer implements Serializable {
     public QueuedCustomer(String sessionId, Customer customer, Account account) {
         this.sessionId = Objects.requireNonNull(sessionId, "sessionId cannot be null");
         this.customer = Objects.requireNonNull(customer, "customer cannot be null");
-        this.account = Objects.requireNonNull(account, "account cannot be null");
+        this.account = account;
     }
 
     public String getSessionId() {

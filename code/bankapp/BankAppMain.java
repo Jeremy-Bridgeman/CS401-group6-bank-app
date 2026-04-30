@@ -1,5 +1,7 @@
 package bankapp;
 
+import java.awt.Window;
+
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -48,34 +50,6 @@ public class BankAppMain {
     }
 
     private static void launchCustomer(BankClientFacade client, String serverIp) {
-        String first = prompt("Customer first name:");
-        if (first == null) return;
-
-        String last = prompt("Customer last name:");
-        if (last == null) return;
-
-        String username = prompt("Customer username:");
-        if (username == null) return;
-
-        String pinText = prompt("Customer PIN:");
-        if (pinText == null) return;
-
-        Customer customer;
-        try {
-            int pin = Integer.parseInt(pinText.trim());
-            customer = new Customer(first, last, new Address(), username, pin);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        Account account = new CheckingAccount(
-            0.0,
-            Account.ACCOUNT_STATUS.OPEN,
-            Account.ACCOUNT_TYPE.CHECKING,
-            customer
-        );
-
         String[] choices = {"ATM", "Teller", "Cancel"};
         int mode = JOptionPane.showOptionDialog(
             null,
@@ -91,12 +65,66 @@ public class BankAppMain {
         if (mode == 0) {
             ATM atm = new ATM(serverIp);
             ATMGUI gui = new ATMGUI(atm);
-            gui.setVisible(true);
-        } else if (mode == 1) {
-            customer.startTellerSession();
+            showWindow(gui);
+            return;
+        }
+
+        if (mode == 1) {
+            String username = prompt("Customer username:");
+            if (username == null) return;
+
+            Response found = client.findCustomer(username.trim());
+            if (found == null) {
+                JOptionPane.showMessageDialog(
+                    null,
+                    "No response from server.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            Customer customer;
+            Account account;
+
+            if (found.getCustomer() != null) {
+                customer = found.getCustomer();
+                account = found.getAccount();
+            } else {
+                String first = prompt("First name:");
+                if (first == null) return;
+
+                String last = prompt("Last name:");
+                if (last == null) return;
+
+                customer = new Customer(first.trim(), last.trim(), new Address(), username.trim(), 0);
+                account = null;
+
+                JOptionPane.showMessageDialog(
+                    null,
+                    "No existing account found. You will be placed in the teller queue as a new customer.",
+                    "New Customer",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+
+            try {
+                if (customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
+                    customer.startTellerSession();
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(
+                    null,
+                    e.getMessage(),
+                    "Session Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
             String sessionId = client.createSessionId();
             WaitingForTellerDialog waiting = new WaitingForTellerDialog(customer, account, client, sessionId);
-            waiting.setVisible(true);
+            showWindow(waiting);
         }
     }
 
@@ -114,7 +142,7 @@ public class BankAppMain {
             int register = Integer.parseInt(registerText.trim());
             Teller teller = new Teller(first, last, new Address(), register);
             TellerGUI gui = new TellerGUI(teller, null, null, client);
-            gui.setVisible(true);
+            showWindow(gui);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -142,17 +170,32 @@ public class BankAppMain {
             );
 
             ManagerGUI gui = new ManagerGUI(manager, account, client);
-            gui.setVisible(true);
+            showWindow(gui);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    private static void showWindow(Window window) {
+        window.setVisible(true);
+        window.toFront();
+        window.requestFocus();
+        window.setAlwaysOnTop(true);
+        window.setAlwaysOnTop(false);
+    }
+
     private static String prompt(String message) {
-        String value = JOptionPane.showInputDialog(null, message, "Bank App", JOptionPane.QUESTION_MESSAGE);
+        String value = JOptionPane.showInputDialog(
+            null,
+            message,
+            "Bank App",
+            JOptionPane.QUESTION_MESSAGE
+        );
         if (value == null) return null;
+
         value = value.trim();
         if (value.isEmpty()) return null;
+
         return value;
     }
 }

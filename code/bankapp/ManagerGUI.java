@@ -23,15 +23,17 @@ public class ManagerGUI extends JFrame {
     }
 
     private void buildUi() {
-        setTitle("Manager Console - " + manager.getName());
+        setTitle("[MANAGER] " + manager.getName());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(720, 280);
+        setSize(850, 300);
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
         root.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JLabel header = new JLabel("Manager: " + manager.getName() + " | Register #" + manager.getRegisterNumber());
+        JLabel header = new JLabel(
+            "Manager: " + manager.getName() + " | Register #" + manager.getRegisterNumber()
+        );
         header.setFont(new Font("SansSerif", Font.BOLD, 20));
         root.add(header, BorderLayout.NORTH);
 
@@ -53,31 +55,30 @@ public class ManagerGUI extends JFrame {
         JButton depositBtn = new JButton("Deposit");
         JButton withdrawBtn = new JButton("Withdraw");
         JButton logsBtn = new JButton("View Logs");
-        JButton quitBtn = new JButton("Quit");
+        JButton exitBtn = new JButton("Exit");
 
         styleButton(balanceBtn);
         styleButton(depositBtn);
         styleButton(withdrawBtn);
         styleButton(logsBtn);
-        styleButton(quitBtn);
+        styleButton(exitBtn);
 
         balanceBtn.addActionListener(e -> checkBalance());
         depositBtn.addActionListener(e -> deposit());
         withdrawBtn.addActionListener(e -> withdraw());
         logsBtn.addActionListener(e -> viewLogs());
-        quitBtn.addActionListener(e -> dispose());
+        exitBtn.addActionListener(e -> exit());
 
         buttonPanel.add(balanceBtn);
         buttonPanel.add(depositBtn);
         buttonPanel.add(withdrawBtn);
         buttonPanel.add(logsBtn);
-        buttonPanel.add(quitBtn);
+        buttonPanel.add(exitBtn);
 
         center.add(amountPanel);
         center.add(buttonPanel);
 
         root.add(center, BorderLayout.CENTER);
-
         setContentPane(root);
     }
 
@@ -110,7 +111,44 @@ public class ManagerGUI extends JFrame {
 
     private void viewLogs() {
         Response response = client.viewLogs(manager);
-        showResponse(response, "Logs");
+
+        if (response == null) {
+            showError("operation failed: response was null");
+            return;
+        }
+
+        if (response.getType() == Response.RESPONSE_TYPE.ERROR) {
+            showError(response.getMessage());
+            return;
+        }
+
+        String text = response.getMessage();
+        if (text == null || text.trim().isEmpty()) {
+            text = "No logs available.";
+        }
+
+        JTextArea logArea = new JTextArea(text);
+        logArea.setEditable(false);
+        logArea.setCaretPosition(0);
+        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
+        logArea.setLineWrap(false);
+        logArea.setWrapStyleWord(false);
+
+        JScrollPane scrollPane = new JScrollPane(logArea);
+        scrollPane.setPreferredSize(new Dimension(900, 500));
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        JOptionPane.showMessageDialog(
+            this,
+            scrollPane,
+            "Manager Logs",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
+    private void exit() {
+        dispose();
     }
 
     private double parseAmount() {

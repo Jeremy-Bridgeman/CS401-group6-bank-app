@@ -16,7 +16,8 @@ public class TellerGUI extends JFrame {
     private JTextField amountField;
     private JLabel sessionLabel;
     private String currentSessionId;
-
+    private java.util.List<Account> customerAccounts;
+    
     public TellerGUI(Teller teller, Customer customer, Account account, BankClientFacade client) {
         this.teller = Objects.requireNonNull(teller);
         this.customer = customer;
@@ -24,6 +25,223 @@ public class TellerGUI extends JFrame {
         this.client = Objects.requireNonNull(client);
 
         buildUi();
+    }
+    
+    private Account chooseAccount(java.util.List<Account> accounts) {
+        if (accounts == null || accounts.isEmpty()) {
+            return null;
+        }
+
+        String[] options = new String[accounts.size()];
+        for (int i = 0; i < accounts.size(); i++) {
+            Account a = accounts.get(i);
+            options[i] = a.getTYPE() + " | #" + a.getAccountNumber() + " | Balance: " + a.getBalance();
+        }
+
+        int selected = JOptionPane.showOptionDialog(
+            this,
+            "Choose an account:",
+            "Select Account",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        if (selected < 0) {
+            return null;
+        }
+
+        return accounts.get(selected);
+    }
+    
+    private Account.ACCOUNT_TYPE promptAccountType() {
+        Object[] options = {"Checking", "Savings", "Credit"};
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            "Choose account type:",
+            "Account Type",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        if (choice == 0) return Account.ACCOUNT_TYPE.CHECKING;
+        if (choice == 1) return Account.ACCOUNT_TYPE.SAVINGS;
+        if (choice == 2) return Account.ACCOUNT_TYPE.CREDIT;
+        return null;
+    }
+    
+    private Account buildAccountForCustomer(Customer customer, Account.ACCOUNT_TYPE type) {
+        if (type == Account.ACCOUNT_TYPE.CHECKING) {
+            return new CheckingAccount(0.0, Account.ACCOUNT_STATUS.OPEN, Account.ACCOUNT_TYPE.CHECKING, customer);
+        }
+        if (type == Account.ACCOUNT_TYPE.SAVINGS) {
+            return new SavingsAccount(0.0, Account.ACCOUNT_STATUS.OPEN, Account.ACCOUNT_TYPE.SAVINGS, customer);
+        }
+        if (type == Account.ACCOUNT_TYPE.CREDIT) {
+            return new CreditAccount(0.0, Account.ACCOUNT_STATUS.OPEN, Account.ACCOUNT_TYPE.CREDIT, customer);
+        }
+        return null;
+    }
+    
+    private void loadOrOnboardCustomer() {
+        try {
+            if (teller.isCustomerPresent()) {
+                throw new IllegalStateException("end the current session before loading another customer");
+            }
+
+            String username = JOptionPane.showInputDialog(this, "Customer username:");
+            if (username == null || username.trim().isEmpty()) {
+                return;
+            }
+
+            Response response = client.findCustomer(username.trim());
+            if (response == null) {
+                showError("no response from server");
+                return;
+            }
+
+            if (response.getCustomer() != null) {
+                this.customer = response.getCustomer();
+                this.customerAccounts = response.getAccounts();
+
+                if (customerAccounts == null || customerAccounts.isEmpty()) {
+                    this.account = response.getAccount();
+                } else {
+                    this.account = chooseAccount(customerAccounts);
+                }
+
+                if (this.account == null) {
+                    return;
+                }
+
+                teller.beginSession(customer);
+                if (customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
+                    customer.startTellerSession();
+                }
+                sessionLabel.setText("Serving: " + customer.getName());
+                showResponse(new Response("Loaded existing customer account", Response.RESPONSE_TYPE.SUCCESS), "Customer");
+                return;
+            }
+
+            int create = JOptionPane.showConfirmDialog(
+                this,
+                "No customer found. Create new customer?",
+                "Create Customer",
+                JOptionPane.YES_NO_OPTION
+            );
+
+            if (create == JOptionPane.YES_OPTION) {
+                createNewCustomerAndFirstAccount(username.trim());
+            }
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+    
+    private void createNewCustomerAndFirstAccount(String defaultUsername) {
+        try {
+            String first = JOptionPane.showInputDialog(this, "Customer first name:");
+            if (first == null || first.trim().isEmpty()) return;
+
+            String last = JOptionPane.showInputDialog(this, "Customer last name:");
+            if (last == null || last.trim().isEmpty()) return;
+
+            String username = defaultUsername;
+            if (username == null || username.trim().isEmpty()) {
+                username = JOptionPane.showInputDialog(this, "Customer username:");
+                if (username == null || username.trim().isEmpty()) return;
+            }
+
+            String pinText = JOptionPane.showInputDialog(this, "Customer PIN:");
+            if (pinText == null || pinText.trim().isEmpty()) return;
+
+            Account.ACCOUNT_TYPE type = promptAccountType();
+            if (type == null) return;
+
+            Response existing = client.findCustomer(username.trim());
+            if (existing != null && existing.getCustomer() != null) {
+                showError("customer already exists; load them instead");
+                return;
+            }
+
+            int pin = Integer.parseInt(pinText.trim());
+            Customer newCustomer = new Customer(first.trim(), last.trim(), new Address(), username.trim(), pin);
+            Account newAccount = buildAccountForCustomer(newCustomer, type);
+
+            Response response = client.openAccount(teller, Request.USER_TYPE.TELLER, newAccount);
+            if (response != null && response.getType() == Response.RESPONSE_TYPE.SUCCESS) {
+                this.customer = newCustomer;
+                this.account = newAccount;
+                this.customerAccounts = new java.util.ArrayList<Account>();
+                this.customerAccounts.add(newAccount);
+
+                teller.beginSession(newCustomer);
+                newCustomer.startTellerSession();
+                sessionLabel.setText("Serving: " + newCustomer.getName());
+            }
+
+            showResponse(response, "Create Account");
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+    
+    private void openAdditionalAccount() {
+        try {
+            if (customer == null) {
+                throw new IllegalStateException("load a customer first");
+            }
+
+            Account.ACCOUNT_TYPE type = promptAccountType();
+            if (type == null) return;
+
+            Account newAccount = buildAccountForCustomer(customer, type);
+            Response response = client.openAccount(teller, Request.USER_TYPE.TELLER, newAccount);
+
+            if (response != null && response.getType() == Response.RESPONSE_TYPE.SUCCESS) {
+                Response refreshed = client.findCustomer(customer.getUsername());
+                if (refreshed != null && refreshed.getCustomer() != null) {
+                    this.customer = refreshed.getCustomer();
+                    this.customerAccounts = refreshed.getAccounts();
+                    if (customerAccounts != null && !customerAccounts.isEmpty()) {
+                        this.account = chooseAccount(customerAccounts);
+                    }
+                }
+            }
+
+            showResponse(response, "Open New Account");
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+    
+    private void chooseExistingAccount() {
+        try {
+            if (customer == null) {
+                throw new IllegalStateException("load a customer first");
+            }
+
+            Response refreshed = client.findCustomer(customer.getUsername());
+            if (refreshed == null || refreshed.getCustomer() == null) {
+                throw new IllegalStateException("unable to refresh customer accounts");
+            }
+
+            this.customer = refreshed.getCustomer();
+            this.customerAccounts = refreshed.getAccounts();
+
+            Account selected = chooseAccount(customerAccounts);
+            if (selected != null) {
+                this.account = selected;
+                sessionLabel.setText("Serving: " + customer.getName() + " | Active: " + account.getTYPE());
+            }
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
     }
 
     private void buildUi() {
@@ -59,37 +277,45 @@ public class TellerGUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
         JButton readyBtn = new JButton("Ready for Next Customer");
-        JButton findCustomerBtn = new JButton("Find Customer");
-        JButton createCustomerBtn = new JButton("Create Account");
+        JButton loadCustomerBtn = new JButton("Load / Onboard Customer");
+        JButton chooseAccountBtn = new JButton("Choose Account");
+        JButton openNewAccountBtn = new JButton("Open New Account");
+        JButton checkRequestBtn = new JButton("Check Customer Request");
         JButton balanceBtn = new JButton("Check Balance");
         JButton depositBtn = new JButton("Deposit");
         JButton withdrawBtn = new JButton("Withdraw");
         JButton endSessionBtn = new JButton("End Session");
 
         styleButton(readyBtn);
-        styleButton(findCustomerBtn);
-        styleButton(createCustomerBtn);
+        styleButton(loadCustomerBtn);
+        styleButton(chooseAccountBtn);
+        styleButton(openNewAccountBtn);
+        styleButton(checkRequestBtn);
         styleButton(balanceBtn);
         styleButton(depositBtn);
         styleButton(withdrawBtn);
         styleButton(endSessionBtn);
 
         readyBtn.addActionListener(e -> readyForNextCustomer());
-        findCustomerBtn.addActionListener(e -> findCustomer());
-        createCustomerBtn.addActionListener(e -> createCustomerAccount());
+        loadCustomerBtn.addActionListener(e -> loadOrOnboardCustomer());
+        chooseAccountBtn.addActionListener(e -> chooseExistingAccount());
+        openNewAccountBtn.addActionListener(e -> openAdditionalAccount());
+        checkRequestBtn.addActionListener(e -> checkCustomerRequest());
         balanceBtn.addActionListener(e -> checkBalance());
         depositBtn.addActionListener(e -> deposit());
         withdrawBtn.addActionListener(e -> withdraw());
         endSessionBtn.addActionListener(e -> endSession());
-
+        
         buttonPanel.add(readyBtn);
-        buttonPanel.add(findCustomerBtn);
-        buttonPanel.add(createCustomerBtn);
+        buttonPanel.add(loadCustomerBtn);
+        buttonPanel.add(chooseAccountBtn);
+        buttonPanel.add(openNewAccountBtn);
+        buttonPanel.add(checkRequestBtn);
         buttonPanel.add(balanceBtn);
         buttonPanel.add(depositBtn);
         buttonPanel.add(withdrawBtn);
         buttonPanel.add(endSessionBtn);
-
+        
         center.add(sessionLabel);
         center.add(Box.createVerticalStrut(10));
         center.add(amountPanel);
@@ -99,9 +325,46 @@ public class TellerGUI extends JFrame {
 
         setContentPane(root);
     }
+    
+    private void checkCustomerRequest() {
+        try {
+            requireActiveSession();
+
+            Response response = client.tellerPollCustomerRequest(teller);
+            if (response == null) {
+                showError("no response from server");
+                return;
+            }
+
+            if (response.getType() != Response.RESPONSE_TYPE.SUCCESS) {
+                showResponse(response, "Customer Request");
+                return;
+            }
+
+            String action = response.getRequestedAction();
+            double amount = response.getRequestedAmount();
+
+            if (action == null || amount <= 0) {
+                showResponse(new Response("customer request payload was incomplete", Response.RESPONSE_TYPE.ERROR), "Customer Request");
+                return;
+            }
+
+            amountField.setText(String.valueOf(amount));
+            showResponse(
+                new Response("Customer requested " + action.toLowerCase() + " of " + amount, Response.RESPONSE_TYPE.INFO),
+                "Customer Request"
+            );
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
 
     private void readyForNextCustomer() {
         try {
+            if (teller.isCustomerPresent()) {
+                throw new IllegalStateException("end the current session before taking the next customer");
+            }
+
             Response response = client.tellerReady(teller);
             if (response == null) {
                 showError("no response from server");
@@ -109,22 +372,7 @@ public class TellerGUI extends JFrame {
             }
 
             if (response.isReady()) {
-                currentSessionId = response.getSessionId();
-
-                if (response.getCustomer() == null || response.getAccount() == null) {
-                    showError("server assigned a teller session but did not return customer/account data");
-                    return;
-                }
-
-                this.customer = response.getCustomer();
-                this.account = response.getAccount();
-
-                teller.beginSession(customer);
-                if (customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
-                    customer.startTellerSession();
-                }
-
-                sessionLabel.setText("Serving: " + customer.getName());
+                assignCustomerFromResponse(response);
                 showResponse(response, "Assigned");
                 return;
             }
@@ -135,28 +383,41 @@ public class TellerGUI extends JFrame {
                 Response poll = client.tellerPollAssignment(teller);
                 if (poll != null && poll.isReady()) {
                     ((Timer) e.getSource()).stop();
-                    currentSessionId = poll.getSessionId();
-
-                    if (poll.getCustomer() == null || poll.getAccount() == null) {
-                        showError("server assigned a teller session but did not return customer/account data");
-                        return;
+                    try {
+                        assignCustomerFromResponse(poll);
+                        showResponse(poll, "Assigned");
+                    } catch (Exception ex) {
+                        showError(ex.getMessage());
                     }
-
-                    this.customer = poll.getCustomer();
-                    this.account = poll.getAccount();
-
-                    teller.beginSession(customer);
-                    if (customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
-                        customer.startTellerSession();
-                    }
-
-                    sessionLabel.setText("Serving: " + customer.getName());
-                    showResponse(poll, "Assigned");
                 }
             });
             timer.start();
         } catch (Exception ex) {
             showError(ex.getMessage());
+        }
+    }
+    
+    private void assignCustomerFromResponse(Response response) {
+        currentSessionId = response.getSessionId();
+
+        if (response.getCustomer() == null) {
+            throw new IllegalStateException("server did not return assigned customer data");
+        }
+
+        this.customer = response.getCustomer();
+        this.account = response.getAccount();
+        this.customerAccounts = response.getAccounts();
+
+        teller.beginSession(customer);
+        if (customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
+            customer.startTellerSession();
+        }
+
+        if (this.account == null) {
+        	sessionLabel.setText("Serving: " + customer.getName() + " | No account yet - click Open New Account");
+        	} 
+        else {
+            sessionLabel.setText("Serving: " + customer.getName());
         }
     }
 
@@ -209,6 +470,7 @@ public class TellerGUI extends JFrame {
                 currentSessionId = null;
                 sessionLabel.setText("No active customer.");
                 showResponse(response, "Session");
+                readyForNextCustomer();
                 return;
             }
 
@@ -220,96 +482,9 @@ public class TellerGUI extends JFrame {
             }
             customer = null;
             account = null;
+            currentSessionId = null;
             sessionLabel.setText("No active customer.");
-        } catch (Exception ex) {
-            showError(ex.getMessage());
-        }
-    }
-
-    private void findCustomer() {
-        try {
-            if (teller.isCustomerPresent()) {
-                throw new IllegalStateException("end the current session before loading another customer");
-            }
-
-            String username = JOptionPane.showInputDialog(this, "Customer username:");
-            if (username == null || username.trim().isEmpty()) {
-                return;
-            }
-
-            Response response = client.findCustomer(username.trim());
-            if (response == null) {
-                showError("no response from server");
-                return;
-            }
-
-            if (response.getCustomer() == null || response.getAccount() == null) {
-                showResponse(response, "Find Customer");
-                return;
-            }
-
-            this.customer = response.getCustomer();
-            this.account = response.getAccount();
-
-            teller.beginSession(customer);
-            if (customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
-                customer.startTellerSession();
-            }
-            sessionLabel.setText("Serving: " + customer.getName());
-
-            showResponse(
-                new Response("Loaded existing customer account", Response.RESPONSE_TYPE.SUCCESS),
-                "Find Customer"
-            );
-        } catch (Exception ex) {
-            showError(ex.getMessage());
-        }
-    }
-
-    private void createCustomerAccount() {
-        try {
-            if (teller.isCustomerPresent()) {
-                throw new IllegalStateException("end the current session before creating another customer account");
-            }
-
-            String first = JOptionPane.showInputDialog(this, "Customer first name:");
-            if (first == null || first.trim().isEmpty()) return;
-
-            String last = JOptionPane.showInputDialog(this, "Customer last name:");
-            if (last == null || last.trim().isEmpty()) return;
-
-            String username = JOptionPane.showInputDialog(this, "Customer username:");
-            if (username == null || username.trim().isEmpty()) return;
-
-            String pinText = JOptionPane.showInputDialog(this, "Customer PIN:");
-            if (pinText == null || pinText.trim().isEmpty()) return;
-
-            Response existing = client.findCustomer(username.trim());
-            if (existing != null && existing.getCustomer() != null) {
-                showError("customer already exists; use Find Customer instead");
-                return;
-            }
-
-            int pin = Integer.parseInt(pinText.trim());
-            Customer newCustomer = new Customer(first.trim(), last.trim(), new Address(), username.trim(), pin);
-
-            Account newAccount = new CheckingAccount(
-                0.0,
-                Account.ACCOUNT_STATUS.OPEN,
-                Account.ACCOUNT_TYPE.CHECKING,
-                newCustomer
-            );
-
-            Response response = client.openAccount(teller, Request.USER_TYPE.TELLER, newAccount);
-            if (response != null && response.getType() == Response.RESPONSE_TYPE.SUCCESS) {
-                this.customer = newCustomer;
-                this.account = newAccount;
-                teller.beginSession(newCustomer);
-                newCustomer.startTellerSession();
-                sessionLabel.setText("Serving: " + newCustomer.getName());
-            }
-
-            showResponse(response, "Create Account");
+            readyForNextCustomer();
         } catch (Exception ex) {
             showError(ex.getMessage());
         }

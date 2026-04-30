@@ -155,18 +155,35 @@ class ClientHandler implements Runnable {
             return handleTellerReady(request);
         } else if (rtype == REQUEST_TYPE.TELLER_POLL_ASSIGNMENT) {
             return handleTellerPollAssignment(request);
+        } else if (rtype == REQUEST_TYPE.SUBMIT_TELLER_TRANSACTION_REQUEST) {
+            return handleSubmitTellerTransactionRequest(request);
+        } else if (rtype == REQUEST_TYPE.TELLER_POLL_CUSTOMER_REQUEST) {
+            return handleTellerPollCustomerRequest(request);
         } else if (rtype == REQUEST_TYPE.END_TELLER_SESSION) {
             return handleEndTellerSession(request);
+        } else if (rtype == REQUEST_TYPE.AUTHENTICATE_CUSTOMER) {
+            return handleAuthenticateCustomer(request);
+        } else if (rtype == REQUEST_TYPE.FIND_CUSTOMER) {
+            return handleFindCustomer(request);
         } else if (rtype == REQUEST_TYPE.OTHER) {
             return handleOther(request);
-        }else if (rtype == REQUEST_TYPE.AUTHENTICATE_CUSTOMER) {
-            return handleAuthenticateCustomer(request);
-        }
-        else if (rtype == REQUEST_TYPE.FIND_CUSTOMER) {
-            return handleFindCustomer(request);
         } else {
             return new Response("Unknown Request", Response.RESPONSE_TYPE.INFO);
         }
+    }
+    
+    private Response handleSubmitTellerTransactionRequest(Request req) {
+        if (!(req.getPerson() instanceof Customer)) {
+            return new Response("unable to submit teller transaction request: requester was not a customer", Response.RESPONSE_TYPE.ERROR);
+        }
+        return server.submitTellerTransactionRequest(req.getSessionId(), req.getText(), req.getAmount());
+    }
+
+    private Response handleTellerPollCustomerRequest(Request req) {
+        if (!(req.getPerson() instanceof Teller)) {
+            return new Response("unable to poll customer request: requester was not a teller", Response.RESPONSE_TYPE.ERROR);
+        }
+        return server.pollCustomerRequest((Teller) req.getPerson());
     }
     
     private Response handleAuthenticateCustomer(Request req) {
@@ -281,9 +298,7 @@ class ClientHandler implements Runnable {
         if (!(req.getPerson() instanceof Customer)) {
             return new Response("unable to join teller queue: requester was not a customer", Response.RESPONSE_TYPE.ERROR);
         }
-        if (req.getSourceAccount() == null) {
-            return nullAccountError;
-        }
+
         return server.joinTellerQueue((Customer) req.getPerson(), req.getSourceAccount(), req.getSessionId());
     }
 
@@ -556,11 +571,33 @@ class ClientHandler implements Runnable {
     }
 
     private Response handleViewLogs(Request req) {
-        if (req == null) return nullRequestError;
-        if (!isManager(req)) return managerOnlyLogsError;
+        if (req == null) {
+            return nullRequestError;
+        }
+
+        if (!isManager(req)) {
+            return managerOnlyLogsError;
+        }
 
         ArrayList<Log> logs = logger.getLogs();
-        return new Response(logs.toString(), Response.RESPONSE_TYPE.LOG);
+
+        if (logs.isEmpty()) {
+            return new Response("No logs available.", Response.RESPONSE_TYPE.LOG);
+        }
+
+        String output = "Bank Activity Logs\n";
+        output += "========================================\n";
+
+        for (Log log : logs) {
+            output += "Date: " + log.getDate() + "\n";
+            output += "Type: " + log.getType() + "\n";
+            output += "Comment: " + log.getComment() + "\n";
+            output += "Amount: " + log.getAmount() + "\n";
+            output += "Account: " + log.getAccountKey() + "\n";
+            output += "----------------------------------------\n";
+        }
+
+        return new Response(output, Response.RESPONSE_TYPE.LOG);
     }
 
     private Response handleOther(Request req) {

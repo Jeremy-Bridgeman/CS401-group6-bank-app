@@ -1,20 +1,9 @@
 package bankapp;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
 
 public class Server {
     static String ip;
@@ -29,6 +18,11 @@ public class Server {
     private final Queue<QueuedCustomer> tellerQueue = new ArrayDeque<QueuedCustomer>();
     private final Map<Integer, Teller> readyTellersByRegister = new HashMap<Integer, Teller>();
     private final Map<String, TellerAssignment> assignmentsBySessionId = new HashMap<String, TellerAssignment>();
+    private final Map<String, String> pendingCustomerRequestActionBySessionId = new HashMap<String, String>();
+    private final Map<String, Double> pendingCustomerRequestAmountBySessionId = new HashMap<String, Double>();
+    
+    
+    
 
     private static final String ACCOUNTS_FILE = "accounts.dat";
 
@@ -61,29 +55,98 @@ public class Server {
             e.printStackTrace();
         }
     }
+    
+    private java.util.List<Account> findAllAccountsForCustomer(Customer customer) {
+        java.util.List<Account> matches = new java.util.ArrayList<Account>();
+
+        if (customer == null) {
+            return matches;
+        }
+
+        synchronized (accounts) {
+            for (Account account : accounts) {
+                if (account == null) {
+                    continue;
+                }
+
+                for (Person person : account.getAuthorizedUsers()) {
+                    if (person instanceof Customer) {
+                        Customer existing = (Customer) person;
+                        if (existing.getUsername().equals(customer.getUsername())) {
+                            matches.add(account);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        return matches;
+    }
+    
+    private Account findServerAccountForCustomer(Customer customer, Account requestedAccount) {
+        if (customer == null) {
+            return null;
+        }
+
+        synchronized (accounts) {
+            for (Account serverAccount : accounts) {
+                if (serverAccount == null) {
+                    continue;
+                }
+
+                if (requestedAccount != null && serverAccount.equals(requestedAccount)) {
+                    return serverAccount;
+                }
+
+                for (Person person : serverAccount.getAuthorizedUsers()) {
+                    if (person instanceof Customer) {
+                        Customer existing = (Customer) person;
+                        if (existing.getUsername().equals(customer.getUsername())) {
+                            return serverAccount;
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
 
     public synchronized Response joinTellerQueue(Customer customer, Account account, String sessionId) {
         if (customer == null) {
             return new Response("unable to join teller queue: customer was null", Response.RESPONSE_TYPE.ERROR);
         }
-        if (account == null) {
-            return new Response("unable to join teller queue: account was null", Response.RESPONSE_TYPE.ERROR);
-        }
         if (sessionId == null || sessionId.trim().isEmpty()) {
             return new Response("unable to join teller queue: session id was blank", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        Account serverAccount = null;
+        if (account != null) {
+            serverAccount = findServerAccountForCustomer(customer, account);
+            if (serverAccount == null) {
+                return new Response(
+                    "unable to join teller queue: account not found on server",
+                    Response.RESPONSE_TYPE.ERROR
+                );
+            }
         }
 
         if (assignmentsBySessionId.containsKey(sessionId)) {
             TellerAssignment assignment = assignmentsBySessionId.get(sessionId);
             return new Response(
-                "teller session is already ready",
-                Response.RESPONSE_TYPE.SUCCESS,
-                sessionId,
-                true,
-                -1,
-                assignment.getCustomer().getName(),
-                assignment.getTeller().getName()
-            );
+            	    "teller session is already ready",
+            	    Response.RESPONSE_TYPE.SUCCESS,
+            	    sessionId,
+            	    true,
+            	    -1,
+            	    assignment.getCustomer().getName(),
+            	    assignment.getTeller().getName(),
+            	    assignment.getCustomer(),
+            	    assignment.getAccount(),
+            	    null,
+            	    false
+            	);
         }
 
         int position = 1;
@@ -102,24 +165,28 @@ public class Server {
             position++;
         }
 
-        tellerQueue.add(new QueuedCustomer(sessionId, customer, account));
+        tellerQueue.add(new QueuedCustomer(sessionId, customer, serverAccount));
         matchReadyTellerWithNextCustomer();
 
         if (assignmentsBySessionId.containsKey(sessionId)) {
             TellerAssignment assignment = assignmentsBySessionId.get(sessionId);
             return new Response(
-                "teller is ready now",
-                Response.RESPONSE_TYPE.SUCCESS,
-                sessionId,
-                true,
-                -1,
-                assignment.getCustomer().getName(),
-                assignment.getTeller().getName()
-            );
+            	    "teller is ready now",
+            	    Response.RESPONSE_TYPE.SUCCESS,
+            	    sessionId,
+            	    true,
+            	    -1,
+            	    assignment.getCustomer().getName(),
+            	    assignment.getTeller().getName(),
+            	    assignment.getCustomer(),
+            	    assignment.getAccount(),
+            	    null,
+            	    false
+            	);
         }
 
         return new Response(
-            "joined teller queue",
+        	account == null ? "joined teller queue as new customer" : "joined teller queue",
             Response.RESPONSE_TYPE.INFO,
             sessionId,
             false,
@@ -130,11 +197,8 @@ public class Server {
     }
 
     public synchronized Response checkTellerQueue(String sessionId) {
-        if (sessionId == null || sessionId.trim().isEmpty()) {
-            return new Response("unable to check teller queue: session id was blank", Response.RESPONSE_TYPE.ERROR);
-        }
-
         TellerAssignment assignment = assignmentsBySessionId.get(sessionId);
+
         if (assignment != null) {
             return new Response(
                 "teller session ready",
@@ -143,7 +207,11 @@ public class Server {
                 true,
                 -1,
                 assignment.getCustomer().getName(),
-                assignment.getTeller().getName()
+                assignment.getTeller().getName(),
+                assignment.getCustomer(),
+                assignment.getAccount(),
+                null,
+                false
             );
         }
 
@@ -156,32 +224,48 @@ public class Server {
                 false,
                 position,
                 null,
-                null
+                null,
+                null,
+                null,
+                null,
+                false
             );
         }
 
-        return new Response("session not found in teller queue", Response.RESPONSE_TYPE.WARNING, sessionId, false, -1, null, null);
+        return new Response(
+            "session not found in teller queue",
+            Response.RESPONSE_TYPE.WARNING,
+            sessionId,
+            false,
+            -1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        );
     }
-
+    
     public synchronized Response tellerReady(Teller teller) {
-        if (teller == null) {
-            return new Response("unable to mark teller ready: teller was null", Response.RESPONSE_TYPE.ERROR);
-        }
-
         readyTellersByRegister.put(teller.getRegisterNumber(), teller);
         matchReadyTellerWithNextCustomer();
 
         TellerAssignment assignment = findAssignmentForTeller(teller.getRegisterNumber());
         if (assignment != null) {
-            return new Response(
-                "customer assigned to teller",
-                Response.RESPONSE_TYPE.SUCCESS,
-                assignment.getSessionId(),
-                true,
-                -1,
-                assignment.getCustomer().getName(),
-                teller.getName()
-            );
+        	return new Response(
+        		    "customer assigned to teller",
+        		    Response.RESPONSE_TYPE.SUCCESS,
+        		    assignment.getSessionId(),
+        		    true,
+        		    -1,
+        		    assignment.getCustomer().getName(),
+        		    teller.getName(),
+        		    assignment.getCustomer(),
+        		    assignment.getAccount(),
+        		    null,
+        		    false
+        		);
         }
 
         return new Response(
@@ -191,10 +275,14 @@ public class Server {
             false,
             -1,
             null,
-            teller.getName()
+            teller.getName(),
+            null,
+            null,
+            null,
+            false
         );
     }
-
+    
     public synchronized Response pollTellerAssignment(Teller teller) {
         if (teller == null) {
             return new Response("unable to poll teller assignment: teller was null", Response.RESPONSE_TYPE.ERROR);
@@ -202,25 +290,95 @@ public class Server {
 
         TellerAssignment assignment = findAssignmentForTeller(teller.getRegisterNumber());
         if (assignment != null) {
-            return new Response(
-                "customer assigned to teller",
-                Response.RESPONSE_TYPE.SUCCESS,
-                assignment.getSessionId(),
-                true,
-                -1,
-                assignment.getCustomer().getName(),
-                teller.getName()
-            );
+        	return new Response(
+        		    "customer assigned to teller",
+        		    Response.RESPONSE_TYPE.SUCCESS,
+        		    assignment.getSessionId(),
+        		    true,
+        		    -1,
+        		    assignment.getCustomer().getName(),
+        		    teller.getName(),
+        		    assignment.getCustomer(),
+        		    assignment.getAccount(),
+        		    null,
+        		    false
+        		);
         }
 
         return new Response(
-            "no customer assigned yet",
-            Response.RESPONSE_TYPE.INFO,
+        	    "no customer assigned yet",
+        	    Response.RESPONSE_TYPE.INFO,
+        	    null,
+        	    false,
+        	    -1,
+        	    null,
+        	    teller.getName(),
+        	    null,
+        	    null,
+        	    null,
+        	    false
+        	);
+    }
+    
+    public synchronized Response submitTellerTransactionRequest(String sessionId, String action, double amount) {
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            return new Response("unable to submit teller transaction request: session id was blank", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        TellerAssignment assignment = assignmentsBySessionId.get(sessionId);
+        if (assignment == null) {
+            return new Response("unable to submit teller transaction request: no active teller session found", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        if (!"DEPOSIT".equals(action) && !"WITHDRAW".equals(action)) {
+            return new Response("unable to submit teller transaction request: unsupported action", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        if (amount <= 0) {
+            return new Response("unable to submit teller transaction request: amount must be greater than 0", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        pendingCustomerRequestActionBySessionId.put(sessionId, action);
+        pendingCustomerRequestAmountBySessionId.put(sessionId, amount);
+
+        return new Response("request sent to teller", Response.RESPONSE_TYPE.SUCCESS);
+    }
+
+    public synchronized Response pollCustomerRequest(Teller teller) {
+        if (teller == null) {
+            return new Response("unable to poll customer request: teller was null", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        TellerAssignment assignment = findAssignmentForTeller(teller.getRegisterNumber());
+        if (assignment == null) {
+            return new Response("no active teller session", Response.RESPONSE_TYPE.INFO);
+        }
+
+        String sessionId = assignment.getSessionId();
+        String action = pendingCustomerRequestActionBySessionId.get(sessionId);
+        Double amount = pendingCustomerRequestAmountBySessionId.get(sessionId);
+
+        if (action == null || amount == null) {
+            return new Response("no customer request pending", Response.RESPONSE_TYPE.INFO);
+        }
+
+        pendingCustomerRequestActionBySessionId.remove(sessionId);
+        pendingCustomerRequestAmountBySessionId.remove(sessionId);
+
+        return new Response(
+            "customer requested " + action.toLowerCase(),
+            Response.RESPONSE_TYPE.SUCCESS,
+            sessionId,
+            true,
+            -1,
+            assignment.getCustomer().getName(),
+            teller.getName(),
+            assignment.getCustomer(),
+            assignment.getAccount(),
             null,
             false,
-            -1,
-            null,
-            teller.getName()
+            action,
+            amount
         );
     }
 
@@ -230,6 +388,9 @@ public class Server {
         }
 
         TellerAssignment assignment = assignmentsBySessionId.remove(sessionId);
+        pendingCustomerRequestActionBySessionId.remove(sessionId);
+        pendingCustomerRequestAmountBySessionId.remove(sessionId);
+
         if (assignment == null) {
             return new Response("no active teller session found", Response.RESPONSE_TYPE.WARNING);
         }
@@ -312,6 +473,8 @@ public class Server {
                         Customer customer = (Customer) person;
 
                         if (normalized.equals(customer.getUsername()) && customer.verifyPin(pin)) {
+                            java.util.List<Account> matches = findAllAccountsForCustomer(customer);
+
                             return new Response(
                                 "customer authenticated",
                                 Response.RESPONSE_TYPE.SUCCESS,
@@ -322,6 +485,7 @@ public class Server {
                                 null,
                                 customer,
                                 account,
+                                matches,
                                 true
                             );
                         }
@@ -330,7 +494,19 @@ public class Server {
             }
         }
 
-        return new Response("invalid username or PIN", Response.RESPONSE_TYPE.ERROR, null, false, -1, null, null, null, null, false);
+        return new Response(
+            "invalid username or PIN",
+            Response.RESPONSE_TYPE.ERROR,
+            null,
+            false,
+            -1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        );
     }
 
     public synchronized Response findCustomer(String username) {
@@ -349,7 +525,7 @@ public class Server {
                 for (Person person : account.getAuthorizedUsers()) {
                     if (person instanceof Customer) {
                         Customer customer = (Customer) person;
-
+                        java.util.List<Account> matches = findAllAccountsForCustomer(customer);
                         if (normalized.equals(customer.getUsername())) {
                             return new Response(
                                 "customer found",
@@ -361,6 +537,7 @@ public class Server {
                                 null,
                                 customer,
                                 account,
+                                matches,
                                 false
                             );
                         }
@@ -369,7 +546,19 @@ public class Server {
             }
         }
 
-        return new Response("customer not found", Response.RESPONSE_TYPE.WARNING, null, false, -1, null, null, null, null, false);
+        return new Response(
+	        "customer not found", 
+	        Response.RESPONSE_TYPE.WARNING, 
+	        null, 
+	        false, 
+	        -1, 
+	        null, 
+	        null, 
+	        null, 
+	        null, 
+	        null, 
+	        false
+        );
     }
 
     public void start() {

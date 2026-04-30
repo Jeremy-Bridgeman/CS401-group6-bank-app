@@ -340,6 +340,41 @@ public class BankClientFacade {
             return new Response("check teller queue failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
         }
     }
+    
+    public Response submitTellerTransactionRequest(Customer customer, String sessionId, String action, double amount) {
+        try {
+            Request request = buildRequest(
+                Request.REQUEST_TYPE.SUBMIT_TELLER_TRANSACTION_REQUEST,
+                customer,
+                Request.USER_TYPE.CUSTOMER,
+                null,
+                null,
+                amount,
+                action,
+                sessionId
+            );
+            return send(request);
+        } catch (Exception e) {
+            return new Response("submit teller transaction request failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
+        }
+    }
+
+    public Response tellerPollCustomerRequest(Teller teller) {
+        try {
+            Request request = buildRequest(
+                Request.REQUEST_TYPE.TELLER_POLL_CUSTOMER_REQUEST,
+                teller,
+                Request.USER_TYPE.TELLER,
+                null,
+                null,
+                0.0,
+                "Teller poll customer request"
+            );
+            return send(request);
+        } catch (Exception e) {
+            return new Response("teller poll customer request failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
+        }
+    }
 
     public Response tellerReady(Teller teller) {
         try {
@@ -416,6 +451,8 @@ public class BankClientFacade {
         }
     }
 
+    
+    
     public Response findCustomer(String username) {
         try {
             Customer probe = new Customer("", "", new Address(), username, 0);
@@ -423,7 +460,7 @@ public class BankClientFacade {
             Request request = buildRequest(
                 Request.REQUEST_TYPE.FIND_CUSTOMER,
                 probe,
-                Request.USER_TYPE.TELLER,
+                Request.USER_TYPE.CUSTOMER,
                 null,
                 null,
                 0.0,
