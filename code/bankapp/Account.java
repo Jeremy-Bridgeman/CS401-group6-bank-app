@@ -43,6 +43,8 @@ public class Account implements Serializable {
 	}
 	
 	public void addAuthorizedUser(Customer user, Teller t) {
+		
+		
 		// add user to authorizedUser list
 		authorizedUsers.add(user);
 		
@@ -52,8 +54,12 @@ public class Account implements Serializable {
 	}
 	
 	public void removeAuthorizedUser(Customer user, Teller t) {
+		
+		// check if user exists in list?
+		
 		// remove user from authorizedUser list
-		// subtract count
+		authorizedUsers.remove(user);
+	
 		
 		// update lastUsed
 		lastUsed = new Date();
