@@ -43,11 +43,50 @@ public class Server {
             if (obj instanceof List<?>) {
                 accounts.clear();
                 accounts.addAll((List<Account>) obj);
+                
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+    // Creates a Demo Account
+    private void ensureDemoAccountExists() {
+        synchronized (accounts) {
+
+            for (Account account : accounts) {
+                for (Person p : account.getAuthorizedUsers()) {
+                    if (p instanceof Customer c) {
+                        if ("demo".equals(c.getUsername())) {
+                            return; // already exists
+                        }
+                    }
+                }
+            }
+
+            System.out.println("[SERVER] Creating demo account...");
+
+            Customer demoCustomer = new Customer(
+                "Demo",
+                "User",
+                new Address(),
+                "demo",
+                1234
+            );
+
+            Account demoAccount = new Account(
+                1000.0,
+                Account.ACCOUNT_STATUS.OPEN,
+                Account.ACCOUNT_TYPE.CHECKING,
+                demoCustomer
+            );
+
+            accounts.add(demoAccount);
+            saveAccounts();
+
+            System.out.println("[SERVER] Demo account created: demo / 1234");
+        }
+    }
+    
 
     public synchronized void saveAccounts() {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(ACCOUNTS_FILE))) {
@@ -617,6 +656,9 @@ public class Server {
 
     public void start() {
         loadAccounts();
+        // For testing purposes
+        ensureDemoAccountExists();
+        
         try {
             ServerSocket serverSocket = new ServerSocket(7890);
             serverSocket.setReuseAddress(true);

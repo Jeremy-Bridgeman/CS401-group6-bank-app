@@ -9,15 +9,25 @@ import java.util.Objects;
 public class ATMGUI extends JFrame {
     private static final long serialVersionUID = 1L;
 
+    // Additions and modifications
     private final ATM atm;
     private Customer customer;
     private Account account;
-
+    private JLabel header;
+    
+    private JTextArea outputArea;
+    private JTextField usernameField;
+    private JPasswordField pinField;
+    private JTextField targetAccountField;
     private JTextField amountField;
+    
+    private CardLayout cl;
+    private JPanel container;
 
     public ATMGUI(ATM atm) {
         this.atm = Objects.requireNonNull(atm);
-        authenticateAndBuildUi();
+        buildUi();
+        showLogin();
     }
 
     public ATMGUI(ATM atm, Customer customer, Account account) {
@@ -32,61 +42,6 @@ public class ATMGUI extends JFrame {
         buildUi();
     }
 
-    private void authenticateAndBuildUi() {
-        String username = JOptionPane.showInputDialog(this, "Username:");
-        if (username == null || username.trim().isEmpty()) {
-            dispose();
-            return;
-        }
-
-        String pinText = JOptionPane.showInputDialog(this, "PIN:");
-        if (pinText == null || pinText.trim().isEmpty()) {
-            dispose();
-            return;
-        }
-
-        try {
-            int pin = Integer.parseInt(pinText.trim());
-            Response response = atm.login(username.trim(), pin);
-
-            if (response == null
-                || !response.isAuthenticated()
-                || response.getCustomer() == null
-                || response.getAccount() == null) {
-
-                JOptionPane.showMessageDialog(
-                    this,
-                    response != null ? response.getMessage() : "login failed",
-                    "ATM Login",
-                    JOptionPane.ERROR_MESSAGE
-                );
-                dispose();
-                return;
-            }
-
-            this.customer = response.getCustomer();
-
-            java.util.List<Account> accountList = response.getAccounts();
-            if (accountList != null && !accountList.isEmpty()) {
-                this.account = chooseAccount(accountList);
-                if (this.account == null) {
-                    dispose();
-                    return;
-                }
-            } else {
-                this.account = response.getAccount();
-            }
-
-            if (this.customer.getActiveChannel() == Customer.ACCESS_CHANNEL.NONE) {
-                this.customer.startAtmSession();
-            }
-
-            buildUi();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "ATM Login", JOptionPane.ERROR_MESSAGE);
-            dispose();
-        }
-    }
     private Account chooseAccount(java.util.List<Account> accounts) {
         if (accounts == null || accounts.isEmpty()) {
             return null;
@@ -117,59 +72,107 @@ public class ATMGUI extends JFrame {
     }
 
     private void buildUi() {
-        setTitle("ATM - " + customer.getName());
+    	String name = (customer != null) ? customer.getName() : "Not Logged In";
+        setTitle("ATM - " + name);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(640, 260);
         setLocationRelativeTo(null);
 
-        JPanel root = new JPanel(new BorderLayout(10, 10));
-        root.setBorder(new EmptyBorder(15, 15, 15, 15));
+        // Card System
+        cl = new CardLayout();
+        container = new JPanel(cl);
+        
+        // Login Panel
+        JPanel loginPanel = new JPanel(new GridLayout(0,1));
 
-        JLabel header = new JLabel(
-            "Customer: " + customer.getName() + " | Connected to " + atm.getConnectedServerIP()
+        usernameField = new JTextField();
+        pinField = new JPasswordField();
+        JButton loginBtn = new JButton("Login");
+
+        loginPanel.add(new JLabel("Username:"));
+        loginPanel.add(usernameField);
+        loginPanel.add(new JLabel("PIN:"));
+        loginPanel.add(pinField);
+        loginPanel.add(loginBtn);
+
+        // ATM Panel
+        JPanel atmPanel = new JPanel(new BorderLayout(10,10));
+
+        JPanel top = new JPanel(new GridLayout(0,1));
+        header = new JLabel(
+        		"Customer: " + name + " | Connected to " + atm.getConnectedServerIP()
         );
-        header.setFont(new Font("SansSerif", Font.BOLD, 20));
-        root.add(header, BorderLayout.NORTH);
-
-        JPanel center = new JPanel();
-        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-
-        JPanel amountPanel = new JPanel(new BorderLayout(10, 10));
-        JLabel label = new JLabel("Amount:");
-        label.setFont(new Font("SansSerif", Font.PLAIN, 18));
+        updateHeader();
+        header.setFont(new Font("SansSerif", Font.BOLD, 16));
+        top.add(header);
 
         amountField = new JTextField();
-        amountField.setFont(new Font("SansSerif", Font.PLAIN, 18));
+        top.add(new JLabel("Amount:"));
+        top.add(amountField);
 
-        amountPanel.add(label, BorderLayout.WEST);
-        amountPanel.add(amountField, BorderLayout.CENTER);
+        atmPanel.add(top, BorderLayout.NORTH);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        JPanel buttons = new JPanel(new FlowLayout());
+
         JButton balanceBtn = new JButton("Check Balance");
         JButton depositBtn = new JButton("Deposit");
         JButton withdrawBtn = new JButton("Withdraw");
         JButton quitBtn = new JButton("Quit");
 
-        styleButton(balanceBtn);
-        styleButton(depositBtn);
-        styleButton(withdrawBtn);
-        styleButton(quitBtn);
+        buttons.add(balanceBtn);
+        buttons.add(depositBtn);
+        buttons.add(withdrawBtn);
+        buttons.add(quitBtn);
+
+        atmPanel.add(buttons, BorderLayout.CENTER);
+
+        // Button Logic
+        loginBtn.addActionListener(e -> {
+            try {
+                String username = usernameField.getText().trim();
+                int pin = Integer.parseInt(new String(pinField.getPassword()));
+
+                Response response = atm.login(username, pin);
+
+                if (response != null && response.isAuthenticated()) {
+                    customer = response.getCustomer();
+                    account = response.getAccount();
+                    updateHeader();
+                    showATM();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid login");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Login error: " + ex.getMessage());
+            }
+        });
 
         balanceBtn.addActionListener(e -> checkBalance());
         depositBtn.addActionListener(e -> deposit());
         withdrawBtn.addActionListener(e -> withdraw());
         quitBtn.addActionListener(e -> quit());
 
-        buttonPanel.add(balanceBtn);
-        buttonPanel.add(depositBtn);
-        buttonPanel.add(withdrawBtn);
-        buttonPanel.add(quitBtn);
+        // Adding to container
+        container.add(loginPanel, "LOGIN");
+        container.add(atmPanel, "ATM");
 
-        center.add(amountPanel);
-        center.add(buttonPanel);
-
-        root.add(center, BorderLayout.CENTER);
-        setContentPane(root);
+        setContentPane(container);
+        
+        // If authenticated, go straight to ATM
+        if (customer != null) {
+        	showATM();
+        } else {
+        	showLogin();
+        }
+    }
+    
+    private void updateHeader() {
+        if (customer != null) {
+            header.setText(
+                "Customer: " + customer.getName() +
+                " | Connected to " + atm.getConnectedServerIP()
+            );
+        }
     }
 
     private void checkBalance() {
@@ -267,5 +270,14 @@ public class ATMGUI extends JFrame {
     private void styleButton(JButton b) {
         b.setFont(new Font("SansSerif", Font.BOLD, 16));
         b.setPreferredSize(new Dimension(150, 40));
+    }
+    
+    // View Switching
+    private void showLogin() {
+    	cl.show(container, "LOGIN");
+    }
+    
+    private void showATM() {
+    	cl.show(container, "ATM");
     }
 }
