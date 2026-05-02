@@ -279,8 +279,8 @@ public class TellerGUI extends JFrame {
         amountPanel.add(label, BorderLayout.WEST);
         amountPanel.add(amountField, BorderLayout.CENTER);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-
+        JPanel buttonPanel = new JPanel(new GridLayout(0, 3, 10, 10));
+        
         JButton readyBtn = new JButton("Ready for Next Customer");
         JButton loadCustomerBtn = new JButton("Load / Onboard Customer");
         JButton chooseAccountBtn = new JButton("Choose Account");
@@ -459,6 +459,9 @@ public class TellerGUI extends JFrame {
             Response response = client.deposit(teller, Request.USER_TYPE.TELLER, account, amount);
 
             if (response != null && response.getType() != Response.RESPONSE_TYPE.ERROR) {
+                if (response.getAccount() != null) {
+                    this.account = response.getAccount();
+                }
                 refreshAccountLabel();
 
                 if (currentSessionId != null) {
@@ -487,6 +490,9 @@ public class TellerGUI extends JFrame {
             Response response = client.withdraw(teller, Request.USER_TYPE.TELLER, account, amount);
 
             if (response != null && response.getType() != Response.RESPONSE_TYPE.ERROR) {
+                if (response.getAccount() != null) {
+                    this.account = response.getAccount();
+                }
                 refreshAccountLabel();
 
                 if (currentSessionId != null) {

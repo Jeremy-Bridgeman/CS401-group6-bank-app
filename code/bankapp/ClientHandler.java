@@ -78,6 +78,7 @@ class ClientHandler implements Runnable {
 
                 System.out.println("[RESPONSE SENT] " + formatResponse(response));
 
+                o.reset();
                 o.writeObject(response);
                 o.flush();
             }
@@ -356,12 +357,14 @@ class ClientHandler implements Runnable {
         Response accessError = validateAccess(req);
         if (accessError != null) return accessError;
 
-        Account account = req.getSourceAccount();
+        Account account;
 
         synchronized (accounts) {
-            if (!accounts.contains(account)) {
+            int idx = accounts.indexOf(req.getSourceAccount());
+            if (idx < 0) {
                 return accountNotFoundError;
             }
+            account = accounts.get(idx);
         }
 
         ValidationMessage result = runDepositValidation(account, req.getPerson(), req.getAmount());
@@ -376,7 +379,30 @@ class ClientHandler implements Runnable {
             server.saveAccounts();
         }
 
-        return logAndRespond(
+        logger.logEvent(new Log(
+            Log.TRANSACTION_TYPE.DEPOSIT,
+            "deposit successful",
+            req.getAmount(),
+            account.getLogKey()
+        ));
+        logger.saveLogs();
+
+        return new Response(
+            "Deposit successful",
+            Response.RESPONSE_TYPE.SUCCESS,
+            null,
+            false,
+            -1,
+            null,
+            null,
+            null,
+            account,
+            null,
+            false
+        );
+    }
+/*
+ * return logAndRespond(
             account,
             Log.TRANSACTION_TYPE.DEPOSIT,
             "deposit successful",
@@ -384,7 +410,7 @@ class ClientHandler implements Runnable {
             "Deposit successful",
             Response.RESPONSE_TYPE.SUCCESS
         );
-    }
+ */
 
     private Response handleWithdraw(Request req) {
         if (req == null) return nullRequestError;
@@ -398,12 +424,14 @@ class ClientHandler implements Runnable {
             return atmWithdrawalLimitError;
         }
 
-        Account account = req.getSourceAccount();
+        Account account;
 
         synchronized (accounts) {
-            if (!accounts.contains(account)) {
+            int idx = accounts.indexOf(req.getSourceAccount());
+            if (idx < 0) {
                 return accountNotFoundError;
             }
+            account = accounts.get(idx);
         }
 
         ValidationMessage result = runWithdrawValidation(account, req.getPerson(), req.getAmount());
@@ -422,7 +450,31 @@ class ClientHandler implements Runnable {
             server.saveAccounts();
         }
 
-        return logAndRespond(
+        logger.logEvent(new Log(
+            Log.TRANSACTION_TYPE.WITHDRAWAL,
+            "withdrawal successful",
+            req.getAmount(),
+            account.getLogKey()
+        ));
+        logger.saveLogs();
+
+        return new Response(
+            "Withdrawal successful",
+            Response.RESPONSE_TYPE.SUCCESS,
+            null,
+            false,
+            -1,
+            null,
+            null,
+            null,
+            account,
+            null,
+            false
+        );
+    }
+
+    /*
+     * return logAndRespond(
             account,
             Log.TRANSACTION_TYPE.WITHDRAWAL,
             "withdrawal successful",
@@ -430,8 +482,8 @@ class ClientHandler implements Runnable {
             "Withdrawal successful",
             Response.RESPONSE_TYPE.SUCCESS
         );
-    }
-
+     */
+    
     private Response handleOpenAccount(Request req) {
         if (req == null) return nullRequestError;
         if (req.getSourceAccount() == null) return nullAccountError;
