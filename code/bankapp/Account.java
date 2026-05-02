@@ -1,5 +1,6 @@
 package bankapp;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.*;
 
 public class Account implements Serializable {
@@ -101,19 +102,30 @@ public class Account implements Serializable {
 		// update lastUsed
 		lastUsed = new Date();		
 		
-		// subtract money from account 
-		balance -= amount;
+		// convert to BigDecimal for precision
+		BigDecimal balanceBD = BigDecimal.valueOf(balance);
+		BigDecimal amountBD = BigDecimal.valueOf(amount);
 		
-		return balance;
+		// subtract money 
+		BigDecimal resultBD = balanceBD.subtract(amountBD);
+		double result = resultBD.doubleValue(); // convert to double again
+		
+		return result;
 	}
 	
 	public double deposit(double amount) {
 		// update lastUsed
 		lastUsed = new Date();	
 		
-		// add money to account
-		balance += amount;
-		return balance;
+		// convert to BigDecimal for precision
+		BigDecimal balanceBD = BigDecimal.valueOf(balance);
+		BigDecimal amountBD = BigDecimal.valueOf(amount);
+		
+		// subtract money 
+		BigDecimal resultBD = balanceBD.add(amountBD);
+		double result = resultBD.doubleValue(); // convert to double again
+		
+		return result;
 	}
 	
 	// getters
