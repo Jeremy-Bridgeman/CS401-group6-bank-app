@@ -1,10 +1,14 @@
 package jUnitTests;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Test;
 
 import bankapp.Account;
 import bankapp.Person;
+import bankapp.Teller;
+import bankapp.Customer;
 
 class AccountTest {
 
@@ -49,6 +53,36 @@ class AccountTest {
 		acc.unfreeze();
 		assertEquals(Account.ACCOUNT_STATUS.OPEN, acc.getSTATUS());
 	}
+	
+	@Test
+	void testAddUser() {
+		Account acc = new Account(balance, status, type, user);
+		Customer user2 = new Customer();
+		Teller teller = new  Teller();
+		
+		acc.addAuthorizedUser(user2, teller);
+		ArrayList<Person> accList = acc.getAuthorizedUsers();
+		assertEquals(2, accList.size()); // makes sure there are 2 users in one account
+	}
+	
+	@Test
+	void testRemoveUser() {
+		Account acc = new Account(balance, status, type, user);
+		Customer user2 = new Customer();
+		Customer user3 = new Customer();
+		Teller teller = new  Teller();
+		
+		acc.addAuthorizedUser(user2, teller);
+		acc.addAuthorizedUser(user3, teller);
+		acc.removeAuthorizedUser(user2, teller);
+		
+		ArrayList<Person> accList = acc.getAuthorizedUsers();
+		assertEquals(2, accList.size()); // makes sure there are 2 users in one account
+		assertTrue(accList.contains(user));
+		assertTrue(accList.contains(user3));
+		assertFalse(accList.contains(user2)); // makes sure user2 was removed but not user and user3
+	}
+
 
 
 }
