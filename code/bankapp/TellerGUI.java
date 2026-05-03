@@ -174,16 +174,21 @@ public class TellerGUI extends JFrame {
             Customer newCustomer = new Customer(first.trim(), last.trim(), new Address(), username.trim(), pin);
             Account newAccount = buildAccountForCustomer(newCustomer, type);
 
+            teller.beginSession(newCustomer);
+            newCustomer.startTellerSession();
+
             Response response = client.openAccount(teller, Request.USER_TYPE.TELLER, newAccount);
+
             if (response != null && response.getType() == Response.RESPONSE_TYPE.SUCCESS) {
                 this.customer = newCustomer;
                 this.account = newAccount;
                 this.customerAccounts = new java.util.ArrayList<Account>();
                 this.customerAccounts.add(newAccount);
 
-                teller.beginSession(newCustomer);
-                newCustomer.startTellerSession();
                 sessionLabel.setText("Serving: " + newCustomer.getName());
+            } else {
+                teller.endSession();
+                newCustomer.endSession();
             }
 
             showResponse(response, "Create Account");
