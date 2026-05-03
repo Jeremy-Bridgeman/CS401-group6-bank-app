@@ -67,10 +67,18 @@ public class AccountValidator {
 
     // check if the user is authorized to use the account
     public ValidationMessage validateAuthorizedUser(Account a, Person p) {
-        if (a.getAuthorizedUsers().contains(p)) {
+        if (p == null) {
+            return new ValidationMessage("Validation failed: person was null");
+        }
+
+        // tellers and managers are allowed to act on customer accounts by default
+        if (p instanceof Teller || p instanceof Manager) {
             return new ValidationMessage();
         }
-        else {
+
+        if (a.getAuthorizedUsers().contains(p)) {
+            return new ValidationMessage();
+        } else {
             return new ValidationMessage("Validation failed: User not found in Authorized Users");
         }
     }
