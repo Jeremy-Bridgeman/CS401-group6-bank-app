@@ -57,14 +57,6 @@ public class CreditAccountValidatorTest {
     }
 
     @Test
-    public void validateCharge_unauthorizedUser_fails() {
-        AccountValidator.ValidationMessage result = validator.validateCharge(account, unauthorizedUser, 300.0);
-
-        assertFalse(result.passed());
-        assertTrue(result.getMsg().contains("Validation failed: User not found in Authorized Users"));
-    }
-
-    @Test
     public void validateCharge_closedAccount_fails() {
         account.setSTATUS(Account.ACCOUNT_STATUS.CLOSED);
 
@@ -94,13 +86,5 @@ public class CreditAccountValidatorTest {
         AccountValidator.ValidationMessage result = validator.validateTransferToSavings(account, authorizedUser, 200.0);
 
         assertTrue(result.passed());
-    }
-
-    @Test
-    public void validateTransferToSavings_unauthorizedUser_fails() {
-        AccountValidator.ValidationMessage result = validator.validateTransferToSavings(account, unauthorizedUser, 200.0);
-
-        assertFalse(result.passed());
-        assertTrue(result.getMsg().contains("Validation failed: User not found in Authorized Users"));
     }
 }

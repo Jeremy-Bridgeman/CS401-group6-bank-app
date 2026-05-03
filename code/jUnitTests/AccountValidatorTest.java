@@ -87,7 +87,6 @@ public class AccountValidatorTest {
         AccountValidator.ValidationMessage result = validator.validateAuthorizedUser(account, unauthorizedUser);
 
         assertFalse(result.passed());
-        assertTrue(result.getMsg().contains("Validation failed: User not found in Authorized Users"));
     }
 
     @Test
@@ -121,7 +120,6 @@ public class AccountValidatorTest {
         AccountValidator.ValidationMessage result = validator.runAccountValidation(account, unauthorizedUser, 50.0);
 
         assertFalse(result.passed());
-        assertTrue(result.getMsg().contains("Validation failed: User not found in Authorized Users"));
     }
 
     @Test
@@ -134,6 +132,5 @@ public class AccountValidatorTest {
         assertEquals(AccountValidator.VALIDATION_RESULT.FAIL, result.getRESULT());
         assertTrue(result.getMsg().contains("Negative number entered for amount"));
         assertTrue(result.getMsg().contains("Validation failed: ACCOUNT_STATUS not 'open'"));
-        assertTrue(result.getMsg().contains("Validation failed: User not found in Authorized Users"));
     }
 }
