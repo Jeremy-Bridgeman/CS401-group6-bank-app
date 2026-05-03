@@ -169,7 +169,7 @@ public class ATMGUI extends JFrame {
         container.add(atmPanel, "ATM");
 
         setContentPane(container);
-        
+         
         // If authenticated, go straight to ATM
         if (customer != null) {
         	showATM();

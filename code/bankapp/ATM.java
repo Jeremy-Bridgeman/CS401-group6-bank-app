@@ -20,7 +20,7 @@ public class ATM {
         this.failedAttempts = 0;
         this.serviceCompleted = false;
     }
-
+ 
     public String getConnectedServerIP() {
         return serverIP;
     }
