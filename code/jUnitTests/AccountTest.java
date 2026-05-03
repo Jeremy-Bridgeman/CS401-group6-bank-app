@@ -25,6 +25,9 @@ class AccountTest {
 		assertEquals(status, acc.getSTATUS());
 		assertEquals(type, acc.getTYPE());
 		assertNotNull(acc.getAccountNumber());
+		assertTrue(acc.getPin() >= 1000);
+		assertNotNull(acc.getLastUsed());
+		
 		
 		ArrayList<Person> accList = acc.getAuthorizedUsers();
 		assertEquals(1, accList.size()); // makes sure there is 1 user in one account
@@ -77,13 +80,29 @@ class AccountTest {
 		
 		acc.addAuthorizedUser(user2, teller);
 		acc.addAuthorizedUser(user3, teller);
+		
 		acc.removeAuthorizedUser(user2, teller);
 		
 		ArrayList<Person> accList = acc.getAuthorizedUsers();
-		assertEquals(2, accList.size()); // makes sure there are 2 users in one account
+		assertEquals(2, accList.size()); // makes sure there are 2 users in 1 account
 		assertTrue(accList.contains(user));
 		assertTrue(accList.contains(user3));
 		assertFalse(accList.contains(user2)); // makes sure user2 was removed but not user and user3
+	}
+	
+	@Test
+	void testNoAddingExistingUser() {
+		Account acc = new Account(balance, status, type, user);
+		Customer user2 = new Customer();
+		Teller teller = new  Teller();
+		
+		acc.addAuthorizedUser(user2, teller);	// add twice
+		acc.addAuthorizedUser(user2, teller);
+		
+		ArrayList<Person> accList = acc.getAuthorizedUsers();
+		assertEquals(2, accList.size()); // makes sure there are only 2 users in 1 account
+		
+		
 	}
 	
 	@Test
@@ -100,7 +119,6 @@ class AccountTest {
 		Account acc1 = new Account(balance, status, type, user);
 		Account acc2 = new Account(balance, status, type, user);
 		
-		System.out.println("acc1: " + acc1.getPin() + " acc2: " + acc2.getPin());
 		assertNotEquals(acc1.getPin(), acc2.getPin());
 	}
 
