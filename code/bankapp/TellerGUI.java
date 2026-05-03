@@ -249,7 +249,7 @@ public class TellerGUI extends JFrame {
     private void buildUi() {
         setTitle("Teller Console - " + teller.getName());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(960, 340);
+        setSize(960, 420);
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -279,7 +279,7 @@ public class TellerGUI extends JFrame {
         amountPanel.add(label, BorderLayout.WEST);
         amountPanel.add(amountField, BorderLayout.CENTER);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(0, 3, 10, 10));
+        JPanel buttonPanel = new JPanel(new GridLayout(0, 2, 10, 10));
         
         JButton readyBtn = new JButton("Ready for Next Customer");
         JButton loadCustomerBtn = new JButton("Load / Onboard Customer");
@@ -326,8 +326,9 @@ public class TellerGUI extends JFrame {
         center.add(accountLabel);
         center.add(Box.createVerticalStrut(10));
         center.add(amountPanel);
-        center.add(buttonPanel);
-
+        JScrollPane scrollPane = new JScrollPane(buttonPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        center.add(scrollPane);
         root.add(center, BorderLayout.CENTER);
 
         setContentPane(root);
