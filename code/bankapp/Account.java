@@ -1,5 +1,6 @@
 package bankapp;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.*;
 
 public class Account implements Serializable {
@@ -22,6 +23,8 @@ public class Account implements Serializable {
 	private ACCOUNT_TYPE TYPE;
 	private ArrayList<Person> authorizedUsers = new ArrayList<Person>();
 	private String accountNumber;
+	private int pin;
+	static private int count = 999;
 	
 	
 	// constructor
@@ -38,24 +41,31 @@ public class Account implements Serializable {
 		authorizedUsers.add(user);
 		// update lastUsed
 		lastUsed = new Date();
+		pin = count++;
 		
 	}
 	
 	public void addAuthorizedUser(Customer user, Teller t) {
-		// add user to authorizedUser list
-		authorizedUsers.add(user);
+		// if user doesn't already exist in list
+		if (!(authorizedUsers.contains(user))) {
+			// add user to authorizedUser list
+			authorizedUsers.add(user);
+		}
 		
-		// update lastUsed
-		lastUsed = new Date();
+		// else, user cannot be added if already in list
 		
 	}
 	
 	public void removeAuthorizedUser(Customer user, Teller t) {
-		// remove user from authorizedUser list
-		// subtract count
 		
-		// update lastUsed
-		lastUsed = new Date();
+		// check if user exists in list
+		if (authorizedUsers.contains(user)) {
+			// remove user from authorizedUser list
+			authorizedUsers.remove(user);
+		}
+		
+		// else, user cannot be removed from list
+
 	}
 	
 	public boolean isSuspended() {
@@ -82,38 +92,45 @@ public class Account implements Serializable {
 	
 	public void freeze() {
 		// turn account status to frozen
-		STATUS = ACCOUNT_STATUS.FROZEN;
+		setSTATUS(ACCOUNT_STATUS.FROZEN);
 		
 	}
 	
 	public void unfreeze() {
 		// open account again
-		STATUS = ACCOUNT_STATUS.OPEN;
+		setSTATUS(ACCOUNT_STATUS.OPEN);
 		
 	}
 	
 	public void closeAccount() {
 		// close account status
-		STATUS = ACCOUNT_STATUS.CLOSED;
+		setSTATUS(ACCOUNT_STATUS.CLOSED);
 	}
 	
-	public double withdraw(double amount) {
-		// update lastUsed
-		lastUsed = new Date();		
+	public double withdraw(double amount) {	
 		
-		// subtract money from account 
-		balance -= amount;
+		// convert to BigDecimal for precision
+		BigDecimal balanceBD = BigDecimal.valueOf(balance);
+		BigDecimal amountBD = BigDecimal.valueOf(amount);
 		
-		return balance;
+		// subtract money 
+		BigDecimal resultBD = balanceBD.subtract(amountBD);
+		double result = resultBD.doubleValue(); // convert to double again
+		
+		return result;
 	}
 	
 	public double deposit(double amount) {
-		// update lastUsed
-		lastUsed = new Date();	
+
+		// convert to BigDecimal for precision
+		BigDecimal balanceBD = BigDecimal.valueOf(balance);
+		BigDecimal amountBD = BigDecimal.valueOf(amount);
 		
-		// add money to account
-		balance += amount;
-		return balance;
+		// subtract money 
+		BigDecimal resultBD = balanceBD.add(amountBD);
+		double result = resultBD.doubleValue(); // convert to double again
+		
+		return result;
 	}
 	
 	// getters
@@ -149,6 +166,10 @@ public class Account implements Serializable {
 		return owner + "|" + accountNumber;
 	}
 	
+	public int getPin() {
+		return pin;
+	}
+	
 	// setters
 	public void setBalance(double balance) {
 		this.balance = balance;
@@ -176,6 +197,7 @@ public class Account implements Serializable {
 
 	public void flag() {
 		// logic for flagging the account here
+		setSTATUS(ACCOUNT_STATUS.FLAGGED);
 	}
 	// overrides so we can use comparisons properly
 	@Override
