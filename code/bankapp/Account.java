@@ -23,6 +23,8 @@ public class Account implements Serializable {
 	private ACCOUNT_TYPE TYPE;
 	private ArrayList<Person> authorizedUsers = new ArrayList<Person>();
 	private String accountNumber;
+	private int pin;
+	static private int count = 999;
 	
 	
 	// constructor
@@ -39,6 +41,7 @@ public class Account implements Serializable {
 		authorizedUsers.add(user);
 		// update lastUsed
 		lastUsed = new Date();
+		pin = count++;
 		
 	}
 	
@@ -89,19 +92,19 @@ public class Account implements Serializable {
 	
 	public void freeze() {
 		// turn account status to frozen
-		STATUS = ACCOUNT_STATUS.FROZEN;
+		setSTATUS(ACCOUNT_STATUS.FROZEN);
 		
 	}
 	
 	public void unfreeze() {
 		// open account again
-		STATUS = ACCOUNT_STATUS.OPEN;
+		setSTATUS(ACCOUNT_STATUS.OPEN);
 		
 	}
 	
 	public void closeAccount() {
 		// close account status
-		STATUS = ACCOUNT_STATUS.CLOSED;
+		setSTATUS(ACCOUNT_STATUS.CLOSED);
 	}
 	
 	public double withdraw(double amount) {
@@ -167,6 +170,10 @@ public class Account implements Serializable {
 		return owner + "|" + accountNumber;
 	}
 	
+	public int getPin() {
+		return pin;
+	}
+	
 	// setters
 	public void setBalance(double balance) {
 		this.balance = balance;
@@ -194,6 +201,7 @@ public class Account implements Serializable {
 
 	public void flag() {
 		// logic for flagging the account here
+		setSTATUS(ACCOUNT_STATUS.FLAGGED);
 	}
 	// overrides so we can use comparisons properly
 	@Override
