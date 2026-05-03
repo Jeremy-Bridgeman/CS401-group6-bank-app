@@ -25,6 +25,9 @@ class AccountTest {
 		assertEquals(status, acc.getSTATUS());
 		assertEquals(type, acc.getTYPE());
 		assertNotNull(acc.getAccountNumber());
+		
+		ArrayList<Person> accList = acc.getAuthorizedUsers();
+		assertEquals(1, accList.size()); // makes sure there is 1 user in one account
 	}
 	
 	@Test
@@ -81,6 +84,14 @@ class AccountTest {
 		assertTrue(accList.contains(user));
 		assertTrue(accList.contains(user3));
 		assertFalse(accList.contains(user2)); // makes sure user2 was removed but not user and user3
+	}
+	
+	@Test
+	void testDifferentAccountIDs() {
+		Account acc1 = new Account(balance, status, type, user);
+		Account acc2 = new Account(balance, status, type, user);
+		
+		assertNotEquals(acc1.getAccountNumber(), acc2.getAccountNumber());
 	}
 
 
