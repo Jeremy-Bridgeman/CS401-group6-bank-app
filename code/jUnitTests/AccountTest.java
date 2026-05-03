@@ -94,6 +94,15 @@ class AccountTest {
 		assertNotEquals(acc1.getAccountNumber(), acc2.getAccountNumber());
 	}
 
+	
+	@Test
+	void testDifferentPins() {
+		Account acc1 = new Account(balance, status, type, user);
+		Account acc2 = new Account(balance, status, type, user);
+		
+		System.out.println("acc1: " + acc1.getPin() + " acc2: " + acc2.getPin());
+		assertNotEquals(acc1.getPin(), acc2.getPin());
+	}
 
 
 }
