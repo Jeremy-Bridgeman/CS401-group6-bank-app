@@ -1,10 +1,11 @@
 package bankapp;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.Objects;
+import java.util.List;
 
 public class ATMGUI extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -13,6 +14,7 @@ public class ATMGUI extends JFrame {
     private final ATM atm;
     private Customer customer;
     private Account account;
+    private List<Account> accounts;
     private JLabel header;
     
     private JTextArea outputArea;
@@ -106,8 +108,8 @@ public class ATMGUI extends JFrame {
         header.setFont(new Font("SansSerif", Font.BOLD, 16));
         top.add(header);
 
-        amountField = new JTextField();
         top.add(new JLabel("Amount:"));
+        amountField = new JTextField();
         top.add(amountField);
 
         atmPanel.add(top, BorderLayout.NORTH);
@@ -117,11 +119,13 @@ public class ATMGUI extends JFrame {
         JButton balanceBtn = new JButton("Check Balance");
         JButton depositBtn = new JButton("Deposit");
         JButton withdrawBtn = new JButton("Withdraw");
+        JButton transferBtn = new JButton("Transfer");
         JButton quitBtn = new JButton("Quit");
 
         buttons.add(balanceBtn);
         buttons.add(depositBtn);
         buttons.add(withdrawBtn);
+        buttons.add(transferBtn);
         buttons.add(quitBtn);
 
         atmPanel.add(buttons, BorderLayout.CENTER);
@@ -136,7 +140,14 @@ public class ATMGUI extends JFrame {
 
                 if (response != null && response.isAuthenticated()) {
                     customer = response.getCustomer();
-                    account = response.getAccount();
+                    accounts = response.getAccounts();
+                    account = chooseAccount(accounts);
+                    if (account == null) {
+                        JOptionPane.showMessageDialog(this, "No account selected");
+                        return;
+                    }
+                    updateHeader();
+                    showATM();
                     updateHeader();
                     showATM();
                 } else {
@@ -151,7 +162,8 @@ public class ATMGUI extends JFrame {
         depositBtn.addActionListener(e -> deposit());
         withdrawBtn.addActionListener(e -> withdraw());
         quitBtn.addActionListener(e -> quit());
-
+        transferBtn.addActionListener(e -> transfer());
+        
         // Adding to container
         container.add(loginPanel, "LOGIN");
         container.add(atmPanel, "ATM");
@@ -166,12 +178,45 @@ public class ATMGUI extends JFrame {
         }
     }
     
+    // Transfer Method
+    private void transfer() {
+        try {
+            double amount = parseAmount();
+
+            String targetAccountNumber = JOptionPane.showInputDialog(
+                this,
+                "Enter target account number:"
+            );
+
+            if (targetAccountNumber == null || targetAccountNumber.trim().isEmpty()) {
+                return; // user cancelled
+            }
+
+            Response response = atm.transfer(
+                amount,
+                account,
+                targetAccountNumber.trim(),
+                customer
+            );
+
+            showResponse(response, "Transfer");
+
+            amountField.setText("");
+
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+    
     private void updateHeader() {
         if (customer != null) {
             header.setText(
                 "Customer: " + customer.getName() +
                 " | Connected to " + atm.getConnectedServerIP()
             );
+        } else {
+        	header.setText("Customer: Not Logged In | Connected to )"
+        			+ atm.getConnectedServerIP());
         }
     }
 

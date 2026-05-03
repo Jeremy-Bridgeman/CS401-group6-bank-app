@@ -24,6 +24,10 @@ public class ATM {
     public String getConnectedServerIP() {
         return serverIP;
     }
+    
+    public Response transfer(double amount, Account source, String targetAccountNumber, Person person) {
+        return client.transfer(person, Request.USER_TYPE.ATM, source, null, amount);
+    }
 
     public Response withdraw(double amount, Account account, Person person) {
         return client.withdraw(person, Request.USER_TYPE.ATM, account, amount);
