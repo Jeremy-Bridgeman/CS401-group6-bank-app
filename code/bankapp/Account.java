@@ -46,26 +46,26 @@ public class Account implements Serializable {
 	}
 	
 	public void addAuthorizedUser(Customer user, Teller t) {
+		// if user doesn't already exist in list
+		if (!(authorizedUsers.contains(user))) {
+			// add user to authorizedUser list
+			authorizedUsers.add(user);
+		}
 		
-		
-		// add user to authorizedUser list
-		authorizedUsers.add(user);
-		
-		// update lastUsed
-		lastUsed = new Date();
+		// else, user cannot be added if already in list
 		
 	}
 	
 	public void removeAuthorizedUser(Customer user, Teller t) {
 		
-		// check if user exists in list?
+		// check if user exists in list
+		if (authorizedUsers.contains(user)) {
+			// remove user from authorizedUser list
+			authorizedUsers.remove(user);
+		}
 		
-		// remove user from authorizedUser list
-		authorizedUsers.remove(user);
-	
-		
-		// update lastUsed
-		lastUsed = new Date();
+		// else, user cannot be removed from list
+
 	}
 	
 	public boolean isSuspended() {
@@ -107,9 +107,7 @@ public class Account implements Serializable {
 		setSTATUS(ACCOUNT_STATUS.CLOSED);
 	}
 	
-	public double withdraw(double amount) {
-		// update lastUsed
-		lastUsed = new Date();		
+	public double withdraw(double amount) {	
 		
 		// convert to BigDecimal for precision
 		BigDecimal balanceBD = BigDecimal.valueOf(balance);
@@ -123,9 +121,7 @@ public class Account implements Serializable {
 	}
 	
 	public double deposit(double amount) {
-		// update lastUsed
-		lastUsed = new Date();	
-		
+
 		// convert to BigDecimal for precision
 		BigDecimal balanceBD = BigDecimal.valueOf(balance);
 		BigDecimal amountBD = BigDecimal.valueOf(amount);
