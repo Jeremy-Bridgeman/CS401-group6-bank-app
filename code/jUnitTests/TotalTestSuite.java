@@ -3,16 +3,21 @@ package jUnitTests;
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 
-// runs all tests
+// runs all real test classes only
 @Suite
 @SelectClasses({
-	LogTest.class,						 LoggerTest.class,
-	AddressTest.class,                   ManagerTest.class,
-	ATMJTest.class,                      PersonTest.class,
-	CheckingAccountValidatorTest.class,  SavingsAccountValidatorTest.class,
-	CreditAccountValidatorTest.class,    TellerTest.class,
-	CustomerTest.class,                  TotalTestSuite.class,
-	ValidatorTestHelper.class
+    AccountValidatorTest.class,
+    AddressTest.class,
+    ATMJTest.class,
+    CheckingAccountValidatorTest.class,
+    CreditAccountValidatorTest.class,
+    CustomerTest.class,
+    LogTest.class,
+    LoggerTest.class,
+    ManagerTest.class,
+    PersonTest.class,
+    SavingsAccountValidatorTest.class,
+    TellerTest.class
 })
 public class TotalTestSuite {
 }

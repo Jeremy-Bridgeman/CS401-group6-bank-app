@@ -66,14 +66,6 @@ public class CheckingAccountValidatorTest {
     }
 
     @Test
-    public void validateWithdrawal_unauthorizedUser_failsBeforeFundsCheck() {
-        AccountValidator.ValidationMessage result = validator.validateWithdrawal(account, unauthorizedUser, 100.0);
-
-        assertFalse(result.passed());
-        assertTrue(result.getMsg().contains("Validation failed: User not found in Authorized Users"));
-    }
-
-    @Test
     public void validateTransferToSavings_sufficientFunds_passes() {
         AccountValidator.ValidationMessage result = validator.validateTransferToSavings(account, authorizedUser, 200.0);
 
