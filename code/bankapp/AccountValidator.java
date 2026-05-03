@@ -76,11 +76,31 @@ public class AccountValidator {
             return new ValidationMessage();
         }
 
-        if (a.getAuthorizedUsers().contains(p)) {
-            return new ValidationMessage();
-        } else {
-            return new ValidationMessage("Validation failed: User not found in Authorized Users");
+        // check if user is in authorized users (by identity, not just object reference)
+        for (Person authorized : a.getAuthorizedUsers()) {
+            if (authorized == p) {
+                return new ValidationMessage();
+            }
+
+            // match customers by username (important for network/deserialized objects)
+            if (authorized instanceof Customer ac && p instanceof Customer pc) {
+                if (ac.getUsername().equals(pc.getUsername())) {
+                    return new ValidationMessage();
+                }
+            }
         }
+
+        // build helpful debug identity string
+        String identity;
+        if (p instanceof Customer c) {
+            identity = c.getName() + " (username=" + c.getUsername() + ")";
+        } else {
+            identity = p.getName();
+        }
+
+        return new ValidationMessage(
+            "Validation failed: User '" + identity + "' not found in Authorized Users"
+        );
     }
 
     // check for non-negative amount
