@@ -66,21 +66,28 @@ class ClientHandler implements Runnable {
             i = new ObjectInputStream(client.getInputStream());
 
             while (true) {
-                Object request = i.readObject();
+            	Object obj = i.readObject();
 
-                if (request == null) {
-                    break;
-                }
+            	if (obj == null) {
+            	    break;
+            	}
 
-                System.out.println("[REQUEST RECEIVED] " + formatRequest((Request) request));
+            	if (!(obj instanceof Request)) {
+            	    System.out.println("[HANDLER] Invalid object received: " + obj);
+            	    continue;
+            	}
 
-                Response response = handleRequest((Request) request);
+            	Request request = (Request) obj;
 
-                System.out.println("[RESPONSE SENT] " + formatResponse(response));
+            	System.out.println("[REQUEST RECEIVED] " + formatRequest(request));
 
-                o.reset();
-                o.writeObject(response);
-                o.flush();
+            	Response response = handleRequest(request);
+
+            	System.out.println("[RESPONSE SENT] " + formatResponse(response));
+
+            	o.reset();
+            	o.writeObject(response);
+            	o.flush();
             }
         } catch (EOFException e) {
             System.out.println("[HANDLER] Client disconnected normally: " + client.getInetAddress().getHostAddress());
@@ -172,7 +179,17 @@ class ClientHandler implements Runnable {
             return handleFindCustomer(request);
         } else if (rtype == REQUEST_TYPE.OTHER) {
             return handleOther(request);
-        } else {
+        } else if (rtype == REQUEST_TYPE.GET_ALL_ACCOUNTS) {
+            return server.getAllAccounts();
+        } else if (rtype == REQUEST_TYPE.CREATE_CUSTOMER_AND_ACCOUNT) {
+            return server.createCustomerAndAccount(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getUsername(),
+                    request.getPin(),
+                    request.getAccountType()
+                );
+            } else {
             return new Response("Unknown Request", Response.RESPONSE_TYPE.INFO);
         }
     }
