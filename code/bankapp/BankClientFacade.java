@@ -70,6 +70,7 @@ public class BankClientFacade {
                 return new Response("communication error: input stream was not initialized", Response.RESPONSE_TYPE.ERROR);
             }
 
+            out.reset();
             out.writeObject(request);
             out.flush();
 
