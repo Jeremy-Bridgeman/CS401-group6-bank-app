@@ -3,3 +3,4 @@ bin/
 *.class
 logs.txt
 .DS_Store
+accounts.dat

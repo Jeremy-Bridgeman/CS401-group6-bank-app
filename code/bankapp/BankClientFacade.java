@@ -124,67 +124,52 @@ public class BankClientFacade {
     }
 
     private Request buildRequest(
-    	    Request.REQUEST_TYPE requestType,
+    	    Request.REQUEST_TYPE type,
     	    Person person,
     	    Request.USER_TYPE userType,
-    	    Account sourceAccount,
-    	    Account targetAccount,
-    	    double amount,
-    	    String text,
-    	    String sessionId,
-    	    String username,
-    	    int pin
-    	) {
-    	    if (requestType == null) {
-    	        throw new IllegalArgumentException("request type cannot be null");
-    	    }
-    	    if (userType == null) {
-    	        throw new IllegalArgumentException("user type cannot be null");
-    	    }
-    	    if (person == null) {
-    	        throw new IllegalArgumentException("person cannot be null");
-    	    }
-
-    	    boolean customerPresent = resolveCustomerPresent(person, userType);
-
-    	    return new Request(
-    	        requestType,
-    	        userType,
-    	        person,
-    	        sourceAccount,
-    	        targetAccount,
-    	        amount,
-    	        text,
-    	        customerPresent,
-    	        sessionId,
-    	        username,
-    	        pin
-    	    );
-    	}
-    
-    private Request buildRequest(
-    	    Request.REQUEST_TYPE requestType,
-    	    Person person,
-    	    Request.USER_TYPE userType,
-    	    Account sourceAccount,
-    	    Account targetAccount,
+    	    Account source,
+    	    Account target,
     	    double amount,
     	    String text,
     	    String sessionId
     	) {
-    	    return buildRequest(requestType, person, userType, sourceAccount, targetAccount, amount, text, sessionId, null, 0);
+    	    return new Request(
+    	        type,
+    	        userType,
+    	        person,
+    	        source,
+    	        target,
+    	        amount,
+    	        text,
+    	        resolveCustomerPresent(person, userType),
+    	        sessionId,
+    	        null,
+    	        null,
+    	        null,
+    	        null,
+    	        0
+    	    );
     	}
-
-    	private Request buildRequest(
-    	    Request.REQUEST_TYPE requestType,
+    
+    private Request buildRequest(
+    	    Request.REQUEST_TYPE type,
     	    Person person,
     	    Request.USER_TYPE userType,
-    	    Account sourceAccount,
-    	    Account targetAccount,
+    	    Account source,
+    	    Account target,
     	    double amount,
     	    String text
     	) {
-    	    return buildRequest(requestType, person, userType, sourceAccount, targetAccount, amount, text, null, null, 0);
+    	    return buildRequest(
+    	        type,
+    	        person,
+    	        userType,
+    	        source,
+    	        target,
+    	        amount,
+    	        text,
+    	        null
+    	    );
     	}
 
     public Response openAccount(Person person, Request.USER_TYPE userType, Account account) {
@@ -254,6 +239,60 @@ public class BankClientFacade {
             return new Response("transfer failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
         }
     }
+    
+    // For Manager GUI
+    public Response getAllAccounts() {
+        try {
+        	Request request = buildRequest(
+        		    Request.REQUEST_TYPE.GET_ALL_ACCOUNTS,
+        		    null,
+        		    Request.USER_TYPE.MANAGER,
+        		    null,
+        		    null,
+        		    0.0,
+        		    "Get all accounts"
+        		);
+            return send(request);
+        } catch (Exception e) {
+            return new Response("get all accounts failed: " + e.getMessage(),
+                Response.RESPONSE_TYPE.ERROR);
+        }
+    }
+    // Creates customer and account
+    public Response createCustomerAndAccount(
+    	    Manager manager,
+    	    String first,
+    	    String last,
+    	    String username,
+    	    int pin,
+    	    Account.ACCOUNT_TYPE type
+    	) {
+    	    try {
+    	    	Request request = new Request(
+    	    		    Request.REQUEST_TYPE.CREATE_CUSTOMER_AND_ACCOUNT,
+    	    		    Request.USER_TYPE.MANAGER,
+    	    		    manager,
+    	    		    null,
+    	    		    null,
+    	    		    0.0,
+    	    		    "Create customer account",
+    	    		    false,
+    	    		    null,
+    	    		    username,
+    	    		    first,
+    	    		    last,
+    	    		    type,
+    	    		    pin
+    	    		);
+
+    	        // if your Request supports extra fields, pass them properly
+    	        return send(request);
+
+    	    } catch (Exception e) {
+    	        return new Response("create account failed: " + e.getMessage(),
+    	            Response.RESPONSE_TYPE.ERROR);
+    	    }
+    	}
 
     public Response viewAccount(Person person, Request.USER_TYPE userType, Account account) {
         try {
@@ -469,22 +508,27 @@ public class BankClientFacade {
         try {
             Customer probe = new Customer("", "", new Address(), username, pin);
 
-            Request request = buildRequest(
+            Request request = new Request(
                 Request.REQUEST_TYPE.AUTHENTICATE_CUSTOMER,
-                probe,
                 Request.USER_TYPE.CUSTOMER,
+                probe,
                 null,
                 null,
                 0.0,
                 "Authenticate customer",
+                true,
                 null,
                 username,
+                null,
+                null,
+                null,
                 pin
             );
 
             return send(request);
         } catch (Exception e) {
-            return new Response("customer authentication failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
+            return new Response("customer authentication failed: " + e.getMessage(),
+                    Response.RESPONSE_TYPE.ERROR);
         }
     }
 
@@ -494,22 +538,27 @@ public class BankClientFacade {
         try {
             Customer probe = new Customer("", "", new Address(), username, 0);
 
-            Request request = buildRequest(
+            Request request = new Request(
                 Request.REQUEST_TYPE.FIND_CUSTOMER,
-                probe,
                 Request.USER_TYPE.CUSTOMER,
+                probe,
                 null,
                 null,
                 0.0,
                 "Find customer",
+                true,
                 null,
                 username,
+                null,
+                null,
+                null,
                 0
             );
 
             return send(request);
         } catch (Exception e) {
-            return new Response("find customer failed: " + e.getMessage(), Response.RESPONSE_TYPE.ERROR);
+            return new Response("find customer failed: " + e.getMessage(),
+                    Response.RESPONSE_TYPE.ERROR);
         }
     }
 }

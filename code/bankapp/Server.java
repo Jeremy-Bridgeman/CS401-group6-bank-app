@@ -124,6 +124,66 @@ public class Server {
         return matches;
     }
     
+    //Creating and Storing Username + pin
+    public synchronized Response createCustomerAndAccount(
+            String first,
+            String last,
+            String username,
+            int pin,
+            Account.ACCOUNT_TYPE type
+    ) {
+        if (first == null || last == null || username == null) {
+            return new Response("invalid customer data", Response.RESPONSE_TYPE.ERROR);
+        }
+
+        synchronized (accounts) {
+            // prevent duplicate usernames
+            for (Account acc : accounts) {
+                for (Person p : acc.getAuthorizedUsers()) {
+                    if (p instanceof Customer c) {
+                        if (c.getUsername().equals(username)) {
+                            return new Response("username already exists", Response.RESPONSE_TYPE.ERROR);
+                        }
+                    }
+                }
+            }
+
+            Customer customer = new Customer(first, last, new Address(), username, pin);
+            Account account = buildAccount(type, customer);
+
+            accounts.add(account);
+            saveAccounts();
+
+            return new Response(
+                "customer and account created successfully",
+                Response.RESPONSE_TYPE.SUCCESS,
+                null,
+                false,
+                -1,
+                null,
+                null,
+                customer,
+                account,
+                null,
+                false
+            );
+        }
+    }
+    
+    // Building an account
+    private Account buildAccount(Account.ACCOUNT_TYPE type, Customer customer) {
+        if (type == Account.ACCOUNT_TYPE.CHECKING) {
+            return new CheckingAccount(0.0, Account.ACCOUNT_STATUS.OPEN, type, customer);
+        }
+        if (type == Account.ACCOUNT_TYPE.SAVINGS) {
+            return new SavingsAccount(0.0, Account.ACCOUNT_STATUS.OPEN, type, customer);
+        }
+        if (type == Account.ACCOUNT_TYPE.CREDIT) {
+            return new CreditAccount(0.0, Account.ACCOUNT_STATUS.OPEN, type, customer);
+        }
+        return null;
+    }
+    
     private Account findServerAccountForCustomer(Customer customer, Account requestedAccount) {
         if (customer == null) {
             return null;
@@ -151,6 +211,22 @@ public class Server {
         }
 
         return null;
+    }
+    // Get all accounts
+    public synchronized Response getAllAccounts() {
+        return new Response(
+            "accounts retrieved",
+            Response.RESPONSE_TYPE.SUCCESS,
+            null,
+            false,
+            -1,
+            null,
+            null,
+            null,
+            null,
+            new ArrayList<>(accounts),
+            false
+        );
     }
 
     public synchronized Response joinTellerQueue(Customer customer, Account account, String sessionId) {
@@ -235,6 +311,7 @@ public class Server {
             null
         );
     }
+    
 
     public synchronized Response checkTellerQueue(String sessionId) {
         TellerAssignment assignment = assignmentsBySessionId.get(sessionId);

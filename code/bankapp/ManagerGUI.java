@@ -9,7 +9,8 @@ public class ManagerGUI extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private final Manager manager;
-    private final Account account;
+    private Account account;
+    private java.util.List<Account> accounts;
     private final BankClientFacade client;
 
     private JTextField amountField;
@@ -25,7 +26,7 @@ public class ManagerGUI extends JFrame {
     private void buildUi() {
         setTitle("[MANAGER] " + manager.getName());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(850, 300);
+        setSize(1280, 480);
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -49,6 +50,7 @@ public class ManagerGUI extends JFrame {
 
         amountPanel.add(label, BorderLayout.WEST);
         amountPanel.add(amountField, BorderLayout.CENTER);
+        
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         JButton balanceBtn = new JButton("Check Balance");
@@ -68,6 +70,18 @@ public class ManagerGUI extends JFrame {
         withdrawBtn.addActionListener(e -> withdraw());
         logsBtn.addActionListener(e -> viewLogs());
         exitBtn.addActionListener(e -> exit());
+        
+        //Select account
+        JButton selectAccountBtn = new JButton("Select Account");
+        styleButton(selectAccountBtn);
+        selectAccountBtn.addActionListener(e -> selectAccount());
+        buttonPanel.add(selectAccountBtn);
+        
+        // creates an account
+        JButton createAccountBtn = new JButton("Create Account");
+        styleButton(createAccountBtn);
+        createAccountBtn.addActionListener(e -> createAccount());
+        buttonPanel.add(createAccountBtn);
 
         buttonPanel.add(balanceBtn);
         buttonPanel.add(depositBtn);
@@ -81,6 +95,92 @@ public class ManagerGUI extends JFrame {
         root.add(center, BorderLayout.CENTER);
         setContentPane(root);
     }
+    
+    //Account selection
+    private void selectAccount() {
+        Response response = client.getAllAccounts();
+
+        if (response == null || response.getAccounts() == null) {
+            showError("no accounts available");
+            return;
+        }
+
+        java.util.List<Account> list = response.getAccounts();
+
+        String[] options = new String[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            Account a = list.get(i);
+            options[i] = a.getTYPE() + " | #" + a.getAccountNumber() + " | $" + a.getBalance();
+        }
+
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            "Select account:",
+            "Manager Account Selection",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+
+        if (choice >= 0) {
+            this.account = list.get(choice);
+            showResponse(new Response("Account selected", Response.RESPONSE_TYPE.SUCCESS), "Manager");
+        }
+    }
+    // account created
+    private void createAccount() {
+        try {
+            String first = JOptionPane.showInputDialog(this, "First name:");
+            if (first == null) return;
+
+            String last = JOptionPane.showInputDialog(this, "Last name:");
+            if (last == null) return;
+
+            String username = JOptionPane.showInputDialog(this, "Username:");
+            if (username == null) return;
+
+            String pinText = JOptionPane.showInputDialog(this, "PIN:");
+            if (pinText == null) return;
+
+            int pin = Integer.parseInt(pinText.trim());
+
+            String[] types = {"CHECKING", "SAVINGS", "CREDIT"};
+            int choice = JOptionPane.showOptionDialog(
+                this,
+                "Select account type:",
+                "Account Type",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                types,
+                types[0]
+            );
+
+            if (choice < 0) return;
+
+            Account.ACCOUNT_TYPE type = Account.ACCOUNT_TYPE.valueOf(types[choice]);
+
+            Response response = client.createCustomerAndAccount(
+                manager,
+            	first.trim(),
+                last.trim(),
+                username.trim(),
+                pin,
+                type
+            );
+
+            showResponse(response, "Create Account");
+
+        } catch (NumberFormatException ex) {
+            showError("PIN must be a number");
+        } catch (Exception ex) {
+            showError(ex.getMessage());
+        }
+    }
+    
+    
 
     private void checkBalance() {
         Response response = client.viewAccount(manager, Request.USER_TYPE.MANAGER, account);
